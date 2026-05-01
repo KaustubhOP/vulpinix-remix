@@ -42,7 +42,7 @@ const FOOTER_STYLES = `
   /* ── Footer root ── */
   .vx-footer {
     position: relative;
-    background: #080b14;
+    background: var(--vx-bg-primary);
     overflow: hidden;
     font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
     margin-top: 0;

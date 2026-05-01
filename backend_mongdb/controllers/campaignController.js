@@ -18,23 +18,26 @@ const issueUserToken = (email, name) => {
 const createCampaign = async (req, res) => {
   try {
     const {
-      userId,
-      userName,
-      userEmail,
-      businessName,
-      campaignName,
-      objective,
-      budget,
-      budgetType,
-      duration,
-      estimatedReach,
-      targeting,
-      language,
-      platforms,
-      content,
-      links,
-      payment,
-      adImage,
+      // User identity
+      userId, userName, userEmail, userPhone,
+      // Business info
+      businessName, businessGoal, businessCategory,
+      // Campaign basics
+      campaignName, objective, budget, budgetType, currency,
+      duration, estimatedReach, startDatePreference,
+      // Platform(s)
+      platform, platforms,
+      // Ad creative
+      adContentDescription, adCaption, adCopyText, callToAction,
+      creativeFiles, adImage,
+      // Targeting
+      targeting, language,
+      // Social handles
+      socialHandles,
+      // Content / links
+      content, links,
+      // Payment
+      payment, paymentAmount, paymentStatus, paymentId, transactionId, paymentDate,
     } = req.body;
 
     if (!campaignName || !budget || !platforms || platforms.length === 0) {
@@ -47,24 +50,41 @@ const createCampaign = async (req, res) => {
     const effectiveUserId = userId || userEmail || "anonymous";
 
     const campaign = new Campaign({
-      userId: effectiveUserId,
-      userName: userName || "",
-      userEmail: userEmail || "",
-      businessName: businessName || userName || "",
+      userId:           effectiveUserId,
+      userName:         userName         || "",
+      userEmail:        userEmail        || "",
+      userPhone:        userPhone        || "",
+      businessName:     businessName     || userName || "",
+      businessGoal:     businessGoal     || "",
+      businessCategory: businessCategory || "",
       campaignName,
-      objective: objective || "brand_awareness",
+      objective:        objective        || "brand_awareness",
       budget,
-      budgetType: budgetType || "Daily",
-      duration: duration || "",
-      estimatedReach: estimatedReach || "",
-      targeting: targeting || {},
-      language: language || ["English"],
+      budgetType:       budgetType       || "Daily",
+      currency:         currency         || "INR",
+      duration:         duration         || "",
+      estimatedReach:   estimatedReach   || "",
+      startDatePreference: startDatePreference || "",
+      platform:         platform         || (platforms && platforms[0]) || "",
       platforms,
-      content: content || {},
-      links: links || {},
-      payment: payment || {},
-      adImage: adImage || "",
-      status: "pending",
+      adContentDescription: adContentDescription || "",
+      adCaption:        adCaption        || "",
+      adCopyText:       adCopyText       || "",
+      callToAction:     callToAction     || "",
+      creativeFiles:    creativeFiles    || [],
+      adImage:          adImage          || "",
+      targeting:        targeting        || {},
+      language:         language         || ["English"],
+      socialHandles:    socialHandles    || {},
+      content:          content          || {},
+      links:            links            || {},
+      payment:          payment          || {},
+      paymentAmount:    paymentAmount    || "",
+      paymentStatus:    paymentStatus    || "paid",
+      paymentId:        paymentId        || "",
+      transactionId:    transactionId    || "",
+      paymentDate:      paymentDate      ? new Date(paymentDate) : new Date(),
+      status:           "pending",
     });
 
     await campaign.save();
@@ -88,6 +108,7 @@ const createCampaign = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error creating campaign." });
   }
 };
+
 
 /**
  * GET /api/campaign/my-campaigns

@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  User, Mail, Globe, Lock, Instagram, Facebook, Youtube, Twitter, Linkedin,
-  ArrowRight, Sparkles, Shield, CheckCircle2, Building2, Eye, EyeOff, Zap, BarChart3
-} from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useGoogleAuthSimple } from "../hooks/useGoogleAuthSimple";
 
@@ -18,31 +14,28 @@ export default function AuthPage() {
   );
 
   useEffect(() => {
-    if (location.pathname.includes("signup")) {
-      setAuthMode("signup");
-    } else if (location.pathname.includes("login")) {
-      setAuthMode("login");
-    }
+    if (location.pathname.includes("signup")) setAuthMode("signup");
+    else if (location.pathname.includes("login")) setAuthMode("login");
   }, [location.pathname]);
-  const [showPassword, setShowPassword] = useState(false);
+
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
+  const [showSignupPwd, setShowSignupPwd] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [signupData, setSignupData] = useState({ name: "", email: "", password: "", company: "", website: "" });
-  const [socialLinks, setSocialLinks] = useState({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" });
+  const [signupData, setSignupData] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [termsChecked, setTermsChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [pwdScore, setPwdScore] = useState(0);
+  const [pwdHint, setPwdHint] = useState("Use 8+ characters, numbers & symbols");
 
-  // Mark as returning user when they land on this page
-  useEffect(() => {
-    localStorage.setItem("returningUser", "true");
-  }, []);
+  // Mark returning user
+  useEffect(() => { localStorage.setItem("returningUser", "true"); }, []);
 
-  // If already authenticated, skip the auth page and go straight to upload
+  // Redirect if already authenticated
   useEffect(() => {
     const userInfo = localStorage.getItem("userInfo");
     const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (userInfo || isAuthenticated === "true") {
-      navigate("/upload", { replace: true });
-    }
+    if (userInfo || isAuthenticated === "true") navigate("/upload", { replace: true });
   }, [navigate]);
 
   const handleGoogleSuccess = useCallback((googleUser: any) => {
@@ -58,7 +51,7 @@ export default function AuthPage() {
     );
     const userData = {
       name: googleUser.name, email: googleUser.email, picture: googleUser.picture,
-      emailVerified: googleUser.email_verified, authProvider: "google", googleId: googleUser.sub
+      emailVerified: googleUser.email_verified, authProvider: "google", googleId: googleUser.sub,
     };
     localStorage.setItem("isAuthenticated", "true");
     localStorage.setItem("authProvider", "google");
@@ -74,9 +67,7 @@ export default function AuthPage() {
   const { isGoogleLoaded, initializeGoogle } = useGoogleAuthSimple();
 
   useEffect(() => {
-    if (isGoogleLoaded) {
-      initializeGoogle("google-signin-button", handleGoogleSuccess, handleGoogleError);
-    }
+    if (isGoogleLoaded) initializeGoogle("google-signin-button", handleGoogleSuccess, handleGoogleError);
   }, [isGoogleLoaded, initializeGoogle, handleGoogleSuccess, handleGoogleError]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -93,349 +84,455 @@ export default function AuthPage() {
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupData.name || !signupData.email || !signupData.password) { toast.error("Please fill required fields"); return; }
+    if (!signupData.firstName || !signupData.email || !signupData.password) { toast.error("Please fill required fields"); return; }
+    if (!termsChecked) { toast.error("Please accept the Terms of Service"); return; }
     setIsLoading(true);
     setTimeout(() => {
       localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("userInfo", JSON.stringify(signupData));
-      localStorage.setItem("socialLinks", JSON.stringify(socialLinks));
+      localStorage.setItem("userInfo", JSON.stringify({ name: `${signupData.firstName} ${signupData.lastName}`.trim(), ...signupData }));
+      localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
       toast.success("Account Created! 🎉", { description: "Welcome to VULPINIX AI" });
       navigate("/upload");
     }, 1500);
   };
 
-  const featureItems = [
-    { icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20", title: "AI-Powered Automation", desc: "Let our AI handle targeting, creatives, and bid strategies automatically." },
-    { icon: BarChart3, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20", title: "Unified Dashboard", desc: "All your campaigns across every platform, in one powerful interface." },
-    { icon: Shield, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20", title: "Enterprise Security", desc: "Bank-grade encryption protects your data and client information." },
-  ];
+  const checkPasswordStrength = (v: string) => {
+    let sc = 0;
+    if (v.length >= 8) sc++;
+    if (/[A-Z]/.test(v)) sc++;
+    if (/[0-9]/.test(v)) sc++;
+    if (/[^A-Za-z0-9]/.test(v)) sc++;
+    setPwdScore(sc);
+    const hints = ["Too short — add more characters", "Weak — add uppercase letters", "Medium — add numbers or symbols", "Strong password ✓"];
+    setPwdHint(v ? hints[Math.max(0, sc - 1)] : "Use 8+ characters, numbers & symbols");
+  };
+
+  const getBarClass = (barIdx: number) => {
+    if (!signupData.password) return "";
+    const cls = pwdScore <= 1 ? "bar-w" : pwdScore === 2 ? "bar-m" : "bar-s";
+    return barIdx < pwdScore ? cls : "";
+  };
+
+  const pwdHintColor = () => {
+    if (!signupData.password) return "rgba(160,160,210,0.5)";
+    if (pwdScore <= 1) return "#ef4444";
+    if (pwdScore === 2) return "#f59e0b";
+    return "#10b981";
+  };
+
+  const sw = (mode: AuthMode) => {
+    setAuthMode(mode);
+    navigate(mode === "login" ? "/login" : "/signup", { replace: true });
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen flex overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #05071a 0%, #0a0e2c 50%, #060918 100%)" }}
-    >
-      {/* ── LEFT PANEL ── */}
-      <div className="flex-1 lg:flex-none lg:w-[46%] flex flex-col h-screen overflow-y-auto relative z-10">
-        {/* Glassmorphism for mobile */}
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-3xl lg:hidden pointer-events-none" />
-        
-        <div className="mx-auto w-full max-w-[440px] flex flex-col flex-1 px-8 pt-24 pb-12 lg:pt-10 relative z-20">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { min-height: 100vh; font-family: 'DM Sans', sans-serif; background: var(--vx-bg-primary); color: #fff; overflow-x: hidden; }
 
-          {/* Logo */}
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-10">
-            <button onClick={() => navigate("/")} className="flex items-center gap-2.5 group w-fit">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-violet-500 rounded-lg blur opacity-40 group-hover:opacity-70 transition-opacity duration-500" />
-                <div className="relative w-9 h-9 bg-black/80 rounded-lg border border-white/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-              </div>
-              <span className="text-white font-bold text-lg tracking-wide">Vulpinix <span className="text-cyan-400">AI</span></span>
-            </button>
-          </motion.div>
+        /* BACKGROUND */
+        .vx-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        .vx-bg-left { position: absolute; width: 650px; height: 650px; border-radius: 50%; background: radial-gradient(circle, rgba(99,51,255,0.25) 0%, transparent 70%); top: -150px; left: -200px; filter: blur(70px); animation: vxDrift 15s ease-in-out infinite; }
+        .vx-bg-right { position: absolute; width: 550px; height: 550px; border-radius: 50%; background: radial-gradient(circle, rgba(6,214,199,0.18) 0%, transparent 70%); bottom: -100px; right: -100px; filter: blur(70px); animation: vxDrift 18s ease-in-out infinite reverse; }
+        .vx-bg-mid { position: absolute; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(255,45,120,0.07) 0%, transparent 70%); top: 40%; left: 40%; filter: blur(80px); animation: vxDrift 22s ease-in-out infinite 3s; }
+        @keyframes vxDrift { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(30px,40px); } }
 
-          {/* Heading */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
-            <h2 className="text-3xl font-bold text-white tracking-tight mb-2">
-              {authMode === "login" ? "Sign in" : "Create Account"}
-            </h2>
-      <p className="text-[15px] text-gray-400">
-        {authMode === "login" ? "New here? " : "Already have an account? "}
-        <button onClick={() => navigate(authMode === "login" ? "/signup" : "/login")} className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors underline underline-offset-4 decoration-cyan-400/30">
-          {authMode === "login" ? "Sign up for free" : "Sign in"}
-        </button>
-      </p>
-          </motion.div>
+        .vx-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(99,51,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,51,255,0.05) 1px, transparent 1px); background-size: 52px 52px; animation: vxGridDrift 35s linear infinite; }
+        @keyframes vxGridDrift { from { background-position: 0 0; } to { background-position: 52px 52px; } }
 
-          {/* Google OAuth Button */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-6">
-            <div className="relative h-12 bg-white rounded-xl overflow-hidden flex items-center justify-center hover:bg-zinc-100 transition-all hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] cursor-pointer group/google">
-              {/* Fallback native button */}
-              <div className="absolute inset-0 flex items-center justify-center gap-3">
-                {!isGoogleLoaded ? (
-                  <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-500 rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 group-hover/google:scale-110 transition-transform" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                    <span className="text-sm font-bold text-gray-900">Continue with Google</span>
-                  </>
-                )}
-              </div>
-              {/* Google's rendered iframe sits on top */}
-              <div id="google-signin-button" className="absolute inset-0 z-10 opacity-0 hover:opacity-100 transition-opacity" />
-            </div>
-          </motion.div>
+        .vx-ring { position: fixed; border-radius: 50%; border: 1px solid rgba(99,51,255,0.05); top: 50%; left: 50%; pointer-events: none; z-index: 0; animation: vxRingBreath 12s ease-in-out infinite; }
+        .vx-r1 { width: 900px; height: 900px; margin: -450px 0 0 -450px; }
+        .vx-r2 { width: 1200px; height: 1200px; margin: -600px 0 0 -600px; animation-delay: -4s; border-color: rgba(6,214,199,0.03); animation-duration: 16s; }
+        @keyframes vxRingBreath { 0%, 100% { transform: scale(1); opacity: .4; } 50% { transform: scale(1.03); opacity: .8; } }
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-600">or</span>
-            <div className="flex-1 h-px bg-white/10" />
+        .vx-scanline { position: fixed; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,51,255,0.5), rgba(6,214,199,0.4), transparent); animation: vxScan 12s linear infinite; z-index: 1; pointer-events: none; }
+        @keyframes vxScan { 0% { top: -1px; opacity: 0; } 5% { opacity: 1; } 95% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        /* LAYOUT */
+        .vx-page { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+
+        /* LEFT PANEL */
+        .vx-left { background: linear-gradient(160deg, rgba(99,51,255,0.12) 0%, rgba(6,214,199,0.06) 100%); border-right: 1px solid rgba(99,51,255,0.18); padding: 48px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+        .vx-left::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(99,51,255,0.6), rgba(6,214,199,0.4), transparent); }
+
+        .vx-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .vx-logo-mark { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #6333ff, #06d6c7); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #fff; box-shadow: 0 0 30px rgba(99,51,255,0.5); animation: vxLogoPulse 3s ease-in-out infinite; flex-shrink: 0; }
+        @keyframes vxLogoPulse { 0%, 100% { box-shadow: 0 0 20px rgba(99,51,255,0.4); } 50% { box-shadow: 0 0 50px rgba(99,51,255,0.8), 0 0 80px rgba(6,214,199,0.3); } }
+        .vx-logo-name { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #fff; }
+        .vx-logo-name span { background: linear-gradient(135deg, #a78bfa, #06d6c7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+        .vx-left-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 48px 0; }
+        .vx-eyebrow { font-size: 11px; font-weight: 600; color: #06d6c7; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+        .vx-left-title { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #fff; line-height: 1.15; margin-bottom: 14px; }
+        .vx-left-title span { background: linear-gradient(135deg, #a78bfa, #06d6c7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .vx-left-sub { font-size: 15px; color: rgba(210,210,240,0.7); line-height: 1.7; margin-bottom: 32px; }
+
+        .vx-feat-list { display: flex; flex-direction: column; gap: 13px; margin-bottom: 32px; }
+        .vx-feat-item { display: flex; align-items: center; gap: 12px; }
+        .vx-feat-check { width: 28px; height: 28px; border-radius: 8px; background: rgba(6,214,199,0.12); border: 1px solid rgba(6,214,199,0.3); display: flex; align-items: center; justify-content: center; color: #06d6c7; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+        .vx-feat-text { font-size: 14px; color: rgba(220,220,255,0.85); }
+
+        /* Mini dashboard */
+        .vx-dash { background: rgba(8,10,24,0.92); border: 1px solid rgba(99,51,255,0.22); border-radius: 16px; padding: 16px; animation: vxFloatDash 5s ease-in-out infinite; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); }
+        @keyframes vxFloatDash { 0%, 100% { transform: translateY(0) rotate(-0.5deg); } 50% { transform: translateY(-8px) rotate(0.5deg); } }
+        .vx-dash-top { font-size: 10px; color: rgba(160,160,210,0.5); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .5px; }
+        .vx-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: vxLivePulse 1.5s infinite; flex-shrink: 0; }
+        @keyframes vxLivePulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+        .vx-dash-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .vx-dash-m { flex: 1; background: rgba(99,51,255,0.08); border: 1px solid rgba(99,51,255,0.15); border-radius: 10px; padding: 10px; }
+        .vx-dash-m.teal { background: rgba(6,214,199,0.06); border-color: rgba(6,214,199,0.15); }
+        .vx-dash-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #fff; }
+        .vx-dash-lbl { font-size: 10px; color: rgba(160,160,210,0.5); margin-top: 2px; }
+        .vx-dash-delta { font-size: 10px; color: #34d399; margin-top: 3px; }
+        .vx-plat-bars { display: flex; flex-direction: column; gap: 7px; }
+        .vx-pb-row { display: flex; align-items: center; gap: 8px; }
+        .vx-pb-name { font-size: 11px; color: rgba(160,160,210,0.6); min-width: 72px; }
+        .vx-pb-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 20px; overflow: hidden; }
+        .vx-pb-fill { height: 100%; border-radius: 20px; animation: vxBarGrow 2s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes vxBarGrow { from { width: 0; } to { width: var(--w); } }
+        .vx-pb1 { background: linear-gradient(90deg, #833ab4, #fd1d1d); --w: 78%; animation-delay: .3s; }
+        .vx-pb2 { background: linear-gradient(90deg, #1877f2, #42b8ff); --w: 54%; animation-delay: .5s; }
+        .vx-pb3 { background: linear-gradient(90deg, #0077b5, #00a0dc); --w: 42%; animation-delay: .7s; }
+        .vx-pb-pct { font-size: 10px; color: rgba(160,160,210,0.5); min-width: 28px; text-align: right; }
+        .vx-left-bottom { font-size: 12px; color: rgba(160,160,210,0.35); }
+
+        /* RIGHT PANEL */
+        .vx-right { padding: 48px 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(4,5,14,0.5); }
+        .vx-auth-box { width: 100%; max-width: 420px; }
+
+        /* TABS */
+        .vx-tabs { display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 4px; margin-bottom: 32px; }
+        .vx-tab { flex: 1; padding: 12px; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: none; color: rgba(255,255,255,0.45); transition: all .3s cubic-bezier(0.16,1,0.3,1); }
+        .vx-tab.active { background: linear-gradient(135deg, #6333ff, #06d6c7); color: #fff !important; box-shadow: 0 4px 24px rgba(99,51,255,0.45); }
+        .vx-tab:hover:not(.active) { color: rgba(255,255,255,0.75); }
+
+        /* HEADING */
+        .vx-auth-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 6px; line-height: 1.2; }
+        .vx-auth-sub { font-size: 14px; color: rgba(190,190,230,0.65); margin-bottom: 28px; line-height: 1.5; }
+
+        /* SOCIAL BTN */
+        .vx-social-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+        .vx-soc-btn { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .25s; border: none; position: relative; overflow: hidden; }
+        .vx-soc-btn::after { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0); transition: background .2s; }
+        .vx-soc-btn:hover::after { background: rgba(255,255,255,0.05); }
+        .vx-soc-btn:hover { transform: translateY(-2px); }
+        .vx-soc-btn:active { transform: scale(0.98); }
+        .vx-soc-google { background: rgba(66,133,244,0.18); border: 1.5px solid rgba(66,133,244,0.45) !important; color: #ffffff !important; }
+        .vx-soc-google:hover { background: rgba(66,133,244,0.28); box-shadow: 0 8px 30px rgba(66,133,244,0.3); }
+        .vx-soc-apple { background: rgba(255,255,255,0.09); border: 1.5px solid rgba(255,255,255,0.22) !important; color: #ffffff !important; }
+        .vx-soc-apple:hover { background: rgba(255,255,255,0.15); box-shadow: 0 8px 30px rgba(255,255,255,0.08); }
+        .vx-soc-icon { width: 20px; height: 20px; flex-shrink: 0; }
+        .vx-soc-label { color: #ffffff !important; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; }
+
+        /* DIVIDER */
+        .vx-divider { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+        .vx-div-line { flex: 1; height: 1px; background: rgba(255,255,255,0.1); }
+        .vx-div-text { font-size: 12px; color: rgba(180,180,220,0.5); white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; }
+
+        /* FIELDS */
+        .vx-field { margin-bottom: 16px; }
+        .vx-field-label { font-size: 13px; font-weight: 500; color: rgba(220,220,255,0.9); margin-bottom: 7px; display: block; }
+        .vx-field-wrap { position: relative; }
+        .vx-input { width: 100%; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.13); border-radius: 12px; padding: 14px 46px 14px 16px; font-size: 14px; color: #ffffff; font-family: 'DM Sans', sans-serif; outline: none; transition: all .25s; }
+        .vx-input::placeholder { color: rgba(160,160,210,0.38); }
+        .vx-input:focus { background: rgba(99,51,255,0.1); border-color: rgba(99,51,255,0.6); box-shadow: 0 0 0 3px rgba(99,51,255,0.15); }
+        .vx-field-ico { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: rgba(160,160,210,0.55); cursor: pointer; font-size: 15px; transition: color .2s; user-select: none; background: none; border: none; padding: 0; }
+        .vx-field-ico:hover { color: #a78bfa; }
+        .vx-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .vx-name-row .vx-input { padding: 14px 16px; }
+
+        /* PASSWORD STRENGTH */
+        .vx-pwd-bars { display: flex; gap: 4px; margin-top: 8px; }
+        .vx-pwd-bar { flex: 1; height: 3px; border-radius: 20px; background: rgba(255,255,255,0.08); transition: background .35s; }
+        .bar-w { background: #ef4444; }
+        .bar-m { background: #f59e0b; }
+        .bar-s { background: #10b981; }
+        .vx-pwd-hint { font-size: 11px; margin-top: 5px; transition: color .3s; }
+
+        /* FORGOT */
+        .vx-forgot-row { display: flex; justify-content: flex-end; margin: -4px 0 18px; }
+        .vx-forgot-link { font-size: 13px; color: #a78bfa; cursor: pointer; transition: color .2s; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+        .vx-forgot-link:hover { color: #06d6c7; }
+
+        /* TERMS */
+        .vx-terms-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
+        .vx-cb { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid rgba(99,51,255,0.45); background: rgba(99,51,255,0.08); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .25s; margin-top: 2px; font-size: 11px; color: transparent; }
+        .vx-cb.on { background: linear-gradient(135deg, #6333ff, #06d6c7); border-color: transparent; color: #fff; }
+        .vx-terms-txt { font-size: 13px; color: rgba(190,190,230,0.7); line-height: 1.55; }
+        .vx-terms-txt a { color: #a78bfa; cursor: pointer; text-decoration: underline; }
+        .vx-terms-txt a:hover { color: #06d6c7; }
+
+        /* SUBMIT */
+        .vx-submit { width: 100%; padding: 15px 24px; background: linear-gradient(135deg, #6333ff, #06d6c7); border: none; border-radius: 13px; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #ffffff !important; cursor: pointer; transition: all .25s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; position: relative; overflow: hidden; letter-spacing: .2px; }
+        .vx-submit::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent); transform: translateX(-100%); transition: transform .55s; }
+        .vx-submit:hover::before { transform: translateX(100%); }
+        .vx-submit:hover { box-shadow: 0 10px 44px rgba(99,51,255,0.55), 0 0 60px rgba(6,214,199,0.15); transform: translateY(-2px); }
+        .vx-submit:active { transform: scale(0.97); }
+        .vx-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .vx-arr { transition: transform .25s; font-size: 17px; }
+        .vx-submit:hover .vx-arr { transform: translateX(5px); }
+
+        /* SWITCH */
+        .vx-switch-text { text-align: center; font-size: 14px; color: rgba(180,180,220,0.6); }
+        .vx-switch-text span { color: #a78bfa; cursor: pointer; font-weight: 600; transition: color .2s; }
+        .vx-switch-text span:hover { color: #06d6c7; }
+
+        /* SECURE */
+        .vx-secure { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 22px; font-size: 11px; color: rgba(160,160,210,0.38); }
+        .vx-sec-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; animation: vxSecPulse 2s infinite; flex-shrink: 0; }
+        @keyframes vxSecPulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+        /* SPINNER */
+        .vx-spin { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* RESPONSIVE */
+        @media (max-width: 800px) {
+          .vx-page { grid-template-columns: 1fr; }
+          .vx-left { display: none; }
+          .vx-right { padding: 36px 24px; min-height: 100vh; justify-content: flex-start; padding-top: 60px; }
+          .vx-auth-box { max-width: 100%; }
+        }
+
+        /* Google button override */
+        #google-signin-button { display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; height: 100% !important; }
+        #google-signin-button iframe { margin: 0 auto !important; }
+      `}</style>
+
+      {/* BACKGROUND */}
+      <div className="vx-bg">
+        <div className="vx-bg-left"></div>
+        <div className="vx-bg-right"></div>
+        <div className="vx-bg-mid"></div>
+      </div>
+      <div className="vx-grid"></div>
+      <div className="vx-ring vx-r1"></div>
+      <div className="vx-ring vx-r2"></div>
+      <div className="vx-scanline"></div>
+
+      <div className="vx-page">
+
+        {/* ── LEFT PANEL ── */}
+        <div className="vx-left">
+          <div className="vx-logo" onClick={() => navigate("/")}>
+            <div className="vx-logo-mark">V</div>
+            <div className="vx-logo-name">Vulpinix <span>AI</span></div>
           </div>
 
-          {/* Form */}
-          <AnimatePresence mode="popLayout">
-            {authMode === "login" ? (
-              <motion.form
-                key="login"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={handleLogin}
-                className="space-y-4"
-              >
-                <Field label="Email Address" icon={<Mail className="w-4 h-4" />}>
-                  <input
-                    type="email" placeholder="you@example.com" value={loginEmail}
-                    onChange={e => setLoginEmail(e.target.value)}
-                    className="auth-input pl-10"
-                    autoComplete="email"
-                  />
-                </Field>
+          <div className="vx-left-mid">
+            <div className="vx-eyebrow">✦ AI-Powered Marketing Platform</div>
+            <div className="vx-left-title">Automate Your<br /><span>Digital Marketing</span><br />with AI Power</div>
+            <div className="vx-left-sub">Upload content, let AI craft captions, our expert team publishes — you watch the analytics grow in real time.</div>
 
-                <Field label="Password" icon={<Lock className="w-4 h-4" />} rightAction={
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <div className="vx-feat-list">
+              {["AI-generated captions for every platform", "Live analytics — reach, clicks, ROAS & more", "Expert team reviews before publishing", "Instagram, Facebook, LinkedIn & Google Ads"].map((text, i) => (
+                <div className="vx-feat-item" key={i}>
+                  <div className="vx-feat-check">✓</div>
+                  <div className="vx-feat-text">{text}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mini Dashboard */}
+            <div className="vx-dash">
+              <div className="vx-dash-top">
+                <div className="vx-live-dot"></div>
+                Live Performance Dashboard
+              </div>
+              <div className="vx-dash-row">
+                <div className="vx-dash-m">
+                  <div className="vx-dash-val">124K</div>
+                  <div className="vx-dash-lbl">Total Reach</div>
+                  <div className="vx-dash-delta">↑ 32% this week</div>
+                </div>
+                <div className="vx-dash-m teal">
+                  <div className="vx-dash-val">8.4%</div>
+                  <div className="vx-dash-lbl">Engagement</div>
+                  <div className="vx-dash-delta">↑ 1.2%</div>
+                </div>
+              </div>
+              <div className="vx-plat-bars">
+                {[
+                  { name: "Instagram", cls: "vx-pb1", pct: "78%" },
+                  { name: "Facebook", cls: "vx-pb2", pct: "54%" },
+                  { name: "LinkedIn", cls: "vx-pb3", pct: "42%" },
+                ].map((p) => (
+                  <div className="vx-pb-row" key={p.name}>
+                    <div className="vx-pb-name">{p.name}</div>
+                    <div className="vx-pb-wrap"><div className={`vx-pb-fill ${p.cls}`}></div></div>
+                    <div className="vx-pb-pct">{p.pct}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="vx-left-bottom">© 2026 Vulpinix Productions · Pune, India</div>
+        </div>
+
+        {/* ── RIGHT PANEL ── */}
+        <div className="vx-right">
+          <div className="vx-auth-box">
+
+            {/* TABS */}
+            <div className="vx-tabs">
+              <button className={`vx-tab${authMode === "login" ? " active" : ""}`} onClick={() => sw("login")}>Sign In</button>
+              <button className={`vx-tab${authMode === "signup" ? " active" : ""}`} onClick={() => sw("signup")}>Create Account</button>
+            </div>
+
+            {/* ── LOGIN PANEL ── */}
+            {authMode === "login" && (
+              <form onSubmit={handleLogin}>
+                <div className="vx-auth-title">Welcome back 👋</div>
+                <div className="vx-auth-sub">Sign in to your Vulpinix AI account to continue</div>
+
+                <div className="vx-social-row">
+                  {/* Google (real auth) */}
+                  <div style={{ position: "relative", height: "52px" }}>
+                    <button type="button" className="vx-soc-btn vx-soc-google" style={{ width: "100%", height: "100%" }}>
+                      <svg className="vx-soc-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                      </svg>
+                      <span className="vx-soc-label">Continue with Google</span>
+                    </button>
+                    <div id="google-signin-button" style={{ position: "absolute", inset: 0, zIndex: 10, opacity: 0 }} />
+                  </div>
+                  <button type="button" className="vx-soc-btn vx-soc-apple">
+                    <svg className="vx-soc-icon" viewBox="0 0 24 24" fill="white">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                    </svg>
+                    <span className="vx-soc-label">Continue with Apple</span>
                   </button>
-                }>
-                  <input
-                    type={showPassword ? "text" : "password"} placeholder="••••••••" value={loginPassword}
-                    onChange={e => setLoginPassword(e.target.value)}
-                    className="auth-input pl-10 pr-10"
-                    autoComplete="current-password"
-                  />
-                </Field>
-
-                <div className="flex items-center justify-between pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <div className="w-4 h-4 rounded border border-white/20 bg-white/5 group-hover:border-cyan-500/50 transition-colors flex items-center justify-center overflow-hidden">
-                      <input type="checkbox" className="sr-only peer" />
-                      <div className="w-full h-full bg-cyan-500 opacity-0 peer-checked:opacity-100 transition-opacity" />
-                    </div>
-                    <span className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">Remember me</span>
-                  </label>
-                  <a href="#" className="text-xs text-gray-500 hover:text-cyan-400 transition-colors">Forgot password?</a>
                 </div>
 
-                <button
-                  type="submit" disabled={isLoading}
-                  className="w-full h-12 mt-4 rounded-xl font-bold text-sm bg-white text-black hover:bg-gray-100 transition-all disabled:opacity-60 flex items-center justify-center gap-2 group shadow-[0_10px_20px_rgba(255,255,255,0.05)] hover:shadow-[0_15px_30px_rgba(255,255,255,0.1)] active:scale-[0.98]"
-                >
-                  {isLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <>Sign In <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>}
-                </button>
-              </motion.form>
-            ) : (
-              <motion.form
-                key="signup"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={handleSignup}
-                className="space-y-4"
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <Field label="Full Name" icon={<User className="w-4.5 h-4.5" />}>
-                      <input placeholder="John Doe" value={signupData.name} onChange={e => setSignupData({ ...signupData, name: e.target.value })} className="auth-input pl-11" />
-                    </Field>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field label="Email Address" icon={<Mail className="w-4.5 h-4.5" />}>
-                      <input type="email" placeholder="you@example.com" value={signupData.email} onChange={e => setSignupData({ ...signupData, email: e.target.value })} className="auth-input pl-11" />
-                    </Field>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field label="Password" icon={<Lock className="w-4.5 h-4.5" />} rightAction={
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
-                        {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                      </button>
-                    }>
-                      <input type={showPassword ? "text" : "password"} placeholder="Min. 8 characters" value={signupData.password} onChange={e => setSignupData({ ...signupData, password: e.target.value })} className="auth-input pl-11 pr-11" />
-                    </Field>
-                  </div>
-                  <div className="sm:col-span-1">
-                    <Field label="Company" icon={<Building2 className="w-4.5 h-4.5" />}>
-                      <input placeholder="Acme Inc." value={signupData.company} onChange={e => setSignupData({ ...signupData, company: e.target.value })} className="auth-input pl-11" />
-                    </Field>
-                  </div>
-                  <div className="sm:col-span-1">
-                    <Field label="Website" icon={<Globe className="w-4.5 h-4.5" />}>
-                      <input placeholder="acme.com" value={signupData.website} onChange={e => setSignupData({ ...signupData, website: e.target.value })} className="auth-input pl-11" />
-                    </Field>
+                <div className="vx-divider">
+                  <div className="vx-div-line"></div>
+                  <div className="vx-div-text">or continue with email</div>
+                  <div className="vx-div-line"></div>
+                </div>
+
+                <div className="vx-field">
+                  <label className="vx-field-label">Email Address</label>
+                  <div className="vx-field-wrap">
+                    <input className="vx-input" type="email" placeholder="you@example.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} autoComplete="email" />
+                    <span className="vx-field-ico">✉</span>
                   </div>
                 </div>
 
-                <details className="group mt-2">
-                  <summary className="text-xs text-gray-500 hover:text-gray-300 cursor-pointer font-medium select-none list-none flex items-center gap-1.5 transition-colors">
-                    <span className="border border-white/10 rounded px-1.5 py-0.5 group-open:border-white/20">+ Add social links <span className="text-gray-600">(optional)</span></span>
-                  </summary>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {[
-                      { icon: Instagram, key: 'instagram', ph: 'Instagram URL', focus: 'focus:border-pink-500/50' },
-                      { icon: Facebook, key: 'facebook', ph: 'Facebook URL', focus: 'focus:border-blue-500/50' },
-                      { icon: Youtube, key: 'youtube', ph: 'YouTube URL', focus: 'focus:border-red-500/50' },
-                      { icon: Twitter, key: 'twitter', ph: 'Twitter / X URL', focus: 'focus:border-sky-500/50' },
-                      { icon: Linkedin, key: 'linkedin', ph: 'LinkedIn URL', focus: 'focus:border-blue-400/50' },
-                    ].map(({ icon: Icon, key, ph, focus }) => (
-                      <div key={key} className="relative group/field">
-                        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 group-focus-within/field:text-white/50 transition-colors" />
-                        <input
-                          placeholder={ph}
-                          value={socialLinks[key as keyof typeof socialLinks]}
-                          onChange={e => setSocialLinks({ ...socialLinks, [key]: e.target.value })}
-                          className={`auth-input auth-input-sm pl-9 ${focus}`}
-                        />
-                      </div>
-                    ))}
+                <div className="vx-field">
+                  <label className="vx-field-label">Password</label>
+                  <div className="vx-field-wrap">
+                    <input className="vx-input" type={showLoginPwd ? "text" : "password"} placeholder="Enter your password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} autoComplete="current-password" />
+                    <button type="button" className="vx-field-ico" onClick={() => setShowLoginPwd(!showLoginPwd)}>{showLoginPwd ? "🙈" : "👁"}</button>
                   </div>
-                </details>
+                </div>
 
-                <button
-                  type="submit" disabled={isLoading}
-                  className="w-full h-12 mt-6 rounded-xl font-bold text-sm bg-white text-black hover:bg-gray-100 transition-all disabled:opacity-60 flex items-center justify-center gap-2 group shadow-[0_10px_20px_rgba(255,255,255,0.05)] hover:shadow-[0_15px_30px_rgba(255,255,255,0.1)] active:scale-[0.98]"
-                >
-                  {isLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : <>Create Account <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>}
+                <div className="vx-forgot-row">
+                  <button type="button" className="vx-forgot-link">Forgot password?</button>
+                </div>
+
+                <button type="submit" className="vx-submit" disabled={isLoading}>
+                  {isLoading ? <div className="vx-spin"></div> : <>Sign In to Vulpinix <span className="vx-arr">→</span></>}
                 </button>
-              </motion.form>
+
+                <div className="vx-switch-text">
+                  Don't have an account? <span onClick={() => sw("signup")}>Create one free →</span>
+                </div>
+              </form>
             )}
-          </AnimatePresence>
 
-          <p className="mt-auto pt-10 text-[12px] text-gray-500 text-center leading-relaxed">
-            By continuing you agree to our{" "}
-            <a href="/terms" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium underline underline-offset-2 decoration-white/10">Terms of Service</a> and{" "}
-            <a href="/privacy" className="text-gray-400 hover:text-cyan-400 transition-colors font-medium underline underline-offset-2 decoration-white/10">Privacy Policy</a>.
-          </p>
+            {/* ── SIGNUP PANEL ── */}
+            {authMode === "signup" && (
+              <form onSubmit={handleSignup}>
+                <div className="vx-auth-title">Create Account ✦</div>
+                <div className="vx-auth-sub">Join 500+ marketers on Vulpinix AI — free to start</div>
+
+                <div className="vx-social-row">
+                  <button type="button" className="vx-soc-btn vx-soc-google">
+                    <svg className="vx-soc-icon" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    <span className="vx-soc-label">Sign up with Google</span>
+                  </button>
+                  <button type="button" className="vx-soc-btn vx-soc-apple">
+                    <svg className="vx-soc-icon" viewBox="0 0 24 24" fill="white">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                    </svg>
+                    <span className="vx-soc-label">Sign up with Apple</span>
+                  </button>
+                </div>
+
+                <div className="vx-divider">
+                  <div className="vx-div-line"></div>
+                  <div className="vx-div-text">or continue with email</div>
+                  <div className="vx-div-line"></div>
+                </div>
+
+                <div className="vx-name-row">
+                  <div className="vx-field">
+                    <label className="vx-field-label">First Name</label>
+                    <input className="vx-input" type="text" placeholder="First name" value={signupData.firstName} onChange={e => setSignupData({ ...signupData, firstName: e.target.value })} />
+                  </div>
+                  <div className="vx-field">
+                    <label className="vx-field-label">Last Name</label>
+                    <input className="vx-input" type="text" placeholder="Last name" value={signupData.lastName} onChange={e => setSignupData({ ...signupData, lastName: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="vx-field">
+                  <label className="vx-field-label">Email Address</label>
+                  <div className="vx-field-wrap">
+                    <input className="vx-input" type="email" placeholder="you@example.com" value={signupData.email} onChange={e => setSignupData({ ...signupData, email: e.target.value })} autoComplete="email" />
+                    <span className="vx-field-ico">✉</span>
+                  </div>
+                </div>
+
+                <div className="vx-field">
+                  <label className="vx-field-label">Password</label>
+                  <div className="vx-field-wrap">
+                    <input className="vx-input" type={showSignupPwd ? "text" : "password"} placeholder="Create a strong password" value={signupData.password}
+                      onChange={e => { setSignupData({ ...signupData, password: e.target.value }); checkPasswordStrength(e.target.value); }} />
+                    <button type="button" className="vx-field-ico" onClick={() => setShowSignupPwd(!showSignupPwd)}>{showSignupPwd ? "🙈" : "👁"}</button>
+                  </div>
+                  <div className="vx-pwd-bars">
+                    {[0, 1, 2, 3].map(i => <div key={i} className={`vx-pwd-bar ${getBarClass(i)}`}></div>)}
+                  </div>
+                  <div className="vx-pwd-hint" style={{ color: pwdHintColor() }}>{pwdHint}</div>
+                </div>
+
+                <div className="vx-terms-row">
+                  <div className={`vx-cb${termsChecked ? " on" : ""}`} onClick={() => setTermsChecked(!termsChecked)}>
+                    {termsChecked ? "✓" : ""}
+                  </div>
+                  <div className="vx-terms-txt">I agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a> of Vulpinix AI</div>
+                </div>
+
+                <button type="submit" className="vx-submit" disabled={isLoading}>
+                  {isLoading ? <div className="vx-spin"></div> : <>Create Free Account <span className="vx-arr">→</span></>}
+                </button>
+
+                <div className="vx-switch-text">
+                  Already have an account? <span onClick={() => sw("login")}>Sign in →</span>
+                </div>
+              </form>
+            )}
+
+            <div className="vx-secure">
+              <div className="vx-sec-dot"></div>
+              256-bit SSL encrypted · Your data is always safe
+            </div>
+
+          </div>
         </div>
       </div>
-
-      {/* ── RIGHT PANEL ── */}
-      <div className="hidden lg:flex flex-1 relative overflow-hidden items-center justify-center p-10 xl:p-16">
-        {/* Ambient glow */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none" />
-        {/* Grid */}
-        <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-          className="relative z-10 max-w-[480px] w-full"
-        >
-          <h3 className="text-4xl xl:text-[42px] font-bold text-white leading-tight tracking-tight mb-5">
-            Scale your business <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-500">with AI</span>.
-          </h3>
-          <p className="text-gray-400 text-[15px] leading-relaxed mb-10">
-            Join thousands of agencies and brands using Vulpinix to automate campaigns, drive ROI, and win back time.
-          </p>
-
-          <div className="space-y-3">
-            {featureItems.map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.45 + i * 0.08 }}
-                className={`flex items-start gap-5 p-5 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] hover:border-white/20 transition-all duration-500 cursor-default group/feature`}
-              >
-                <div className={`mt-0.5 w-12 h-12 rounded-xl border flex items-center justify-center flex-shrink-0 group-hover/feature:scale-110 group-hover/feature:rotate-3 transition-transform duration-500 ${item.bg}`}>
-                  <item.icon className={`w-5 h-5 ${item.color}`} size={20} />
-                </div>
-                <div>
-                  <p className="text-white font-bold text-base mb-1 group-hover/feature:text-cyan-400 transition-colors">{item.title}</p>
-                  <p className="text-gray-500 text-[14px] leading-relaxed group-hover:text-gray-400 transition-colors">{item.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Testimonial */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75 }}
-            className="mt-8 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] relative overflow-hidden"
-          >
-            <div className="absolute -top-10 -right-10 w-28 h-28 bg-violet-500/15 rounded-full blur-3xl pointer-events-none" />
-            <p className="text-gray-300 text-sm leading-relaxed italic">
-              "Vulpinix replaced our entire ops team for campaign management. The AI is genuinely smarter than our old manual process — 4x ROI in 3 months."
-            </p>
-            <div className="flex items-center gap-3 mt-4">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-400 to-violet-500 p-px flex-shrink-0">
-                <div className="w-full h-full rounded-full bg-[#0d1030] flex items-center justify-center">
-                  <User className="w-4 h-4 text-gray-300" />
-                </div>
-              </div>
-              <div>
-                <p className="text-white text-xs font-semibold">Sarah Williams</p>
-                <p className="text-gray-600 text-[11px]">Head of Growth · NexPeak Agency</p>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-
-      <style>{`
-        .auth-input {
-          width: 100%;
-          height: 48px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 12px;
-          color: white;
-          font-size: 15px;
-          padding-right: 16px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          outline: none;
-          font-weight: 400;
-        }
-        .auth-input::placeholder { color: rgba(255,255,255,0.15); }
-        .auth-input:focus {
-          background: rgba(255,255,255,0.06);
-          border-color: rgba(6,182,212,0.5);
-          box-shadow: 0 0 20px rgba(6,182,212,0.15);
-        }
-        .auth-input-sm { height: 42px; font-size: 14px; border-radius: 10px; }
-
-        #google-signin-button {
-          display: flex !important;
-          justify-content: center !important;
-          align-items: center !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
-        #google-signin-button iframe {
-          margin: 0 auto !important;
-        }
-      `}</style>
-    </motion.div>
-  );
-}
-
-// Helper component for form fields
-function Field({
-  label, icon, children, rightAction
-}: { label: string; icon: React.ReactNode; children: React.ReactNode; rightAction?: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <label className="block text-[12px] font-bold uppercase tracking-[0.1em] text-gray-400 ml-1">{label}</label>
-      <div className="relative group/input">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within/input:text-cyan-400 group-focus-within/input:scale-110 transition-all duration-300">
-          {icon}
-        </span>
-        {children}
-        {rightAction}
-      </div>
-    </div>
+    </>
   );
 }

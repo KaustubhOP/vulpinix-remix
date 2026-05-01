@@ -26,7 +26,7 @@ import {
   Building2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 type CampaignStatus = "pending" | "in_review" | "approved" | "rejected";
 
@@ -206,7 +206,7 @@ export default function CampaignsDashboardPage() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="min-h-screen bg-gradient-to-b from-[#0a0e27] via-[#0f1235] to-black"
+      className="vx-campaigns-page min-h-screen bg-gradient-to-b from-[#0a0e27] via-[#0f1235] to-black"
     >
       {/* Background orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

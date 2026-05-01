@@ -1,0 +1,412 @@
+﻿import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { motion, AnimatePresence } from "motion/react";
+import { 
+  Upload, 
+  FileText, 
+  Image, 
+  Video, 
+  ArrowLeft, 
+  CheckCircle2, 
+  X,
+  Sparkles,
+  Hash,
+  Target,
+  Edit2,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Twitter,
+  Youtube,
+  Calendar,
+  Clock,
+  TrendingUp,
+  Users,
+  DollarSign,
+  Zap,
+  Check,
+  ImageIcon
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Switch } from "../components/ui/switch";
+import { toast } from "sonner";
+import { EditableCaption } from "../components/EditableCaption";
+import { EditableHashtags } from "../components/EditableHashtags";
+import { EditablePlatforms } from "../components/EditablePlatforms";
+import { generateCaptionWithGemini } from "../utils/geminiHelper";
+
+interface UploadedFile {
+  file: File;
+  preview?: string;
+}
+
+interface AIAnalysis {
+  caption: string;
+  hashtags: string[];
+  platforms: string[];
+}
+
+interface Platform {
+  id: string;
+  name: string;
+  icon: any;
+  enabled: boolean;
+  recommendedTime: string;
+  color: string;
+}
+
+// Allowed file types for social media
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif'
+];
+
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/quicktime', // .mov
+  'video/x-msvideo', // .avi
+  'video/webm',
+  'video/x-matroska', // .mkv
+  'video/x-flv',
+  'video/x-ms-wmv'
+];
+
+const ALLOWED_FILE_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+const ALLOWED_EXTENSIONS = '.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.mov,.avi,.webm,.mkv,.flv,.wmv';
+
+export default function UploadPage() {
+  const navigate = useNavigate();
+  const [dragActive, setDragActive] = useState(false);
+
+  // Auth guard: redirect to /auth if not logged in
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (!userInfo && isAuthenticated !== "true") {
+      navigate("/auth", { replace: true });
+    }
+  }, [navigate]);
+
+
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis>({
+    caption: "",
+    hashtags: [],
+    platforms: ["Instagram", "LinkedIn", "Facebook"]
+  });
+  
+  // AI Caption Generation States
+  const [showAiCaptionChoice, setShowAiCaptionChoice] = useState(false);
+  const [useAiCaptions, setUseAiCaptions] = useState<boolean | null>(null);
+  const [generatingCaption, setGeneratingCaption] = useState(false);
+  
+  const [platforms, setPlatforms] = useState<Platform[]>([
+    { id: "instagram", name: "Instagram", icon: Instagram, enabled: true, recommendedTime: "6:00 PM - Peak Engagement", color: "from-pink-500 to-purple-500" },
+    { id: "facebook", name: "Facebook", icon: Facebook, enabled: true, recommendedTime: "1:00 PM - High Activity", color: "from-blue-600 to-blue-400" },
+    { id: "youtube", name: "YouTube", icon: Youtube, enabled: false, recommendedTime: "3:00 PM - Best Viewership", color: "from-red-600 to-red-400" },
+    { id: "linkedin", name: "LinkedIn", icon: Linkedin, enabled: true, recommendedTime: "8:00 AM - Professional Hours", color: "from-blue-700 to-cyan-500" },
+    { id: "twitter", name: "Twitter", icon: Twitter, enabled: false, recommendedTime: "12:00 PM - Lunch Break", color: "from-cyan-500 to-blue-400" },
+  ]);
+
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  
+  // Editing states
+  const [editingCaption, setEditingCaption] = useState(false);
+  const [editingHashtags, setEditingHashtags] = useState(false);
+  const [editingPlatforms, setEditingPlatforms] = useState(false);
+  
+  // Temporary edit values
+  const [tempCaption, setTempCaption] = useState("");
+  const [tempHashtags, setTempHashtags] = useState("");
+  const [newHashtag, setNewHashtag] = useState("");
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+    }
+    e.target.value = '';
+  };
+
+  const handleFile = (file: File) => {
+    // Validate file type
+    if (!ALLOWED_FILE_TYPES.includes(file.type.toLowerCase())) {
+      toast.error('Invalid file type', {
+        description: 'Please upload only images (JPG, PNG, GIF, WebP, HEIC) or videos (MP4, MOV, AVI, WebM, MKV, FLV, WMV)',
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Additional validation for file extension (backup check)
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const allowedExtArray = ALLOWED_EXTENSIONS.split(',');
+    
+    if (!allowedExtArray.includes(fileExtension)) {
+      toast.error('Invalid file format', {
+        description: 'This file format is not supported. Please upload images or videos only.',
+        duration: 5000,
+      });
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    setUploadedFile({ file, preview });
+    startAnalysis();
+  };
+
+  const startAnalysis = () => {
+    setAnalyzing(true);
+    setProgress(0);
+    
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setAnalyzing(false);
+          setAnalysisComplete(true);
+          setShowAiCaptionChoice(true); // Show AI caption choice after analysis
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 200);
+  };
+
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Handle preview image upload
+  const previewFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePreviewImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error("Image too large", {
+          description: "Please select an image under 5MB",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageData = reader.result as string;
+        setPreviewImage(imageData);
+        // Save to localStorage so it can be accessed in AdPreviewPage
+        localStorage.setItem("adPreviewImage", imageData);
+        toast.success("Preview image uploaded successfully!");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePreviewImageClick = () => {
+    previewFileInputRef.current?.click();
+  };
+
+  const togglePlatform = (id: string) => {
+    setPlatforms(platforms.map(p => 
+      p.id === id ? { ...p, enabled: !p.enabled } : p
+    ));
+  };
+
+  // Caption editing handlers
+  const startEditingCaption = () => {
+    setTempCaption(aiAnalysis.caption);
+    setEditingCaption(true);
+  };
+
+  const saveCaption = () => {
+    setAiAnalysis({ ...aiAnalysis, caption: tempCaption });
+    setEditingCaption(false);
+    toast.success('Caption updated successfully!');
+  };
+
+  const cancelEditCaption = () => {
+    setEditingCaption(false);
+    setTempCaption("");
+  };
+
+  // Hashtag editing handlers
+  const startEditingHashtags = () => {
+    setEditingHashtags(true);
+  };
+
+  const addHashtag = () => {
+    if (newHashtag.trim()) {
+      const formattedHashtag = newHashtag.startsWith('#') ? newHashtag : `#${newHashtag}`;
+      setAiAnalysis({
+        ...aiAnalysis,
+        hashtags: [...aiAnalysis.hashtags, formattedHashtag]
+      });
+      setNewHashtag("");
+      toast.success('Hashtag added!');
+    }
+  };
+
+  const removeHashtag = (index: number) => {
+    setAiAnalysis({
+      ...aiAnalysis,
+      hashtags: aiAnalysis.hashtags.filter((_, i) => i !== index)
+    });
+    toast.success('Hashtag removed!');
+  };
+
+  const saveHashtags = () => {
+    setEditingHashtags(false);
+    toast.success('Hashtags updated successfully!');
+  };
+
+  // Platform editing handlers
+  const togglePlatformInAnalysis = (platformName: string) => {
+    if (aiAnalysis.platforms.includes(platformName)) {
+      setAiAnalysis({
+        ...aiAnalysis,
+        platforms: aiAnalysis.platforms.filter(p => p !== platformName)
+      });
+    } else {
+      setAiAnalysis({
+        ...aiAnalysis,
+        platforms: [...aiAnalysis.platforms, platformName]
+      });
+    }
+  };
+
+  const startEditingPlatforms = () => {
+    setEditingPlatforms(true);
+  };
+
+  const savePlatforms = () => {
+    setEditingPlatforms(false);
+    toast.success('Platform recommendations updated!');
+  };
+
+  // AI Caption Generation Handlers
+  const handleAiCaptionChoice = (choice: boolean) => {
+    setUseAiCaptions(choice);
+    setShowAiCaptionChoice(false);
+    
+    if (choice) {
+      generateAiCaptions();
+    } else {
+      // Show empty fields for manual entry
+      setAiAnalysis({
+        caption: "",
+        hashtags: [],
+        platforms: ["Instagram", "Facebook", "LinkedIn"]
+      });
+      toast.info("You can now manually enter your caption and hashtags");
+    }
+  };
+
+  const generateAiCaptions = async () => {
+    setGeneratingCaption(true);
+    
+    // Call Gemini AI API to generate captions and hashtags
+    await generateWithGemini();
+  };
+
+  const generateWithGemini = async () => {
+    try {
+      // Get the uploaded file
+      if (!uploadedFile) {
+        toast.error("No file uploaded");
+        setGeneratingCaption(false);
+        return;
+      }
+
+      // Simulate AI generation with realistic mock data
+      // In production, replace this with actual Gemini API call
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call delay
+
+      // Determine if it's an image or video
+      const isImage = uploadedFile.file.type.startsWith('image/');
+      const isVideo = uploadedFile.file.type.startsWith('video/');
+
+      // Generate contextual mock data based on file type
+      let mockCaption = "";
+      let mockHashtags: string[] = [];
+
+      if (isImage) {
+        mockCaption = "Transform your digital presence with AI-powered marketing automation! ðŸš€ Discover how cutting-edge technology can revolutionize your content strategy and boost engagement across all platforms. âœ¨";
+        mockHashtags = ["#DigitalMarketing", "#AIAutomation", "#VulpinixAI", "#MarketingTech", "#SocialMediaMarketing", "#ContentCreation", "#FutureOfWork"];
+      } else if (isVideo) {
+        mockCaption = "Watch how AI is reshaping the future of digital marketing! ðŸŽ¥ From automated campaigns to intelligent analytics, discover the tools that will take your brand to the next level. ðŸ’¡";
+        mockHashtags = ["#VideoMarketing", "#AITechnology", "#VulpinixAI", "#DigitalTransformation", "#MarketingAutomation", "#TechInnovation", "#ContentStrategy"];
+      } else {
+        mockCaption = "Elevate your marketing game with AI-powered solutions! ðŸŒŸ Join the revolution in digital marketing automation and watch your engagement soar. Ready to transform your strategy? ðŸš€";
+        mockHashtags = ["#DigitalMarketing", "#AIAutomation", "#VulpinixAI", "#MarketingTech", "#Innovation", "#FutureReady", "#GrowthHacking"];
+      }
+
+      // Update the AI analysis with generated content
+      setAiAnalysis({
+        caption: mockCaption,
+        hashtags: mockHashtags,
+        platforms: ["Instagram", "Facebook", "LinkedIn"]
+      });
+      
+      setGeneratingCaption(false);
+      toast.success("AI captions and hashtags generated successfully!");
+      
+    } catch (error: any) {
+      console.error("Error generating captions:", error);
+      
+      // Fallback to default content if anything fails
+      setAiAnalysis({
+        caption: "Discover the future of digital marketing with AI-powered automation. Transform your content strategy today! ðŸš€",
+        hashtags: ["#DigitalMarketing", "#AIAutomation", "#VulpinixAI", "#MarketingTech", "#FutureOfWork"],
+        platforms: ["Instagram", "Facebook", "LinkedIn"]
+      });
+      
+      setGeneratingCaption(false);
+      toast.success("Default captions generated!");
+    }
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) return <Image className="w-8 h-8" />;
+    if (file.type.startsWith('video/')) return <Video className="w-8 h-8" />;
+    return <FileText className="w-8 h-8" />;
+  };
+
+  const enabledPlatforms = platforms.filter(p => p.enabled);
+  const estimatedReach = enabledPlatforms.length * 2500;
+  const aiScore = 94;
+
+  return (
+    <motion.div 

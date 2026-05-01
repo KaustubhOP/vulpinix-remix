@@ -1,30 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { motion } from "motion/react";
-import {
-  ArrowLeft,
-  CreditCard,
-  Smartphone,
-  Building2,
-  Wallet,
-  Lock,
-  CheckCircle2,
-  Shield,
-  MapPin,
-  Users,
-  Globe,
-  Languages,
-  TrendingUp,
-  Sparkles,
-  ChevronDown,
-  Info,
-  AlertCircle
-} from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import PaymentSuccessModal from "../components/PaymentSuccessModal";
+import './UploadPage.css';
 
 type PaymentMethod = "upi" | "card" | "wallet" | null;
 
@@ -147,7 +125,6 @@ export default function PaymentPage() {
       return;
     }
 
-    // Validate based on payment method
     let isValid = false;
     if (selectedMethod === "card") {
       if (!cardNumber || !cardName || !expiryDate || !cvv) {
@@ -168,11 +145,8 @@ export default function PaymentPage() {
       isValid = true;
     }
 
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
 
-    // Generate and send OTP
     setIsSendingOtp(true);
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
     
@@ -215,54 +189,93 @@ export default function PaymentPage() {
 
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsProcessing(false);
 
-      // Get saved user info for business name
       const savedUserInfo = localStorage.getItem("userInfo");
       const userInfo = savedUserInfo ? JSON.parse(savedUserInfo) : {};
+      const savedAdImage = localStorage.getItem("adPreviewImage") || "";
 
-      // Get saved ad preview image
-      const savedAdImage = localStorage.getItem("adPreviewImage") || null;
+      const uploadData   = JSON.parse(localStorage.getItem("uploadData")   || "{}");
+      const createAdData = JSON.parse(localStorage.getItem("createAdData") || "{}");
 
-      // Build enriched campaign object
+      const paymentId     = `PAY-${Date.now()}`;
+      const transactionId = `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      const paymentDate   = new Date().toISOString();
+
       const newCampaign = {
         id: Date.now().toString(),
-        businessName: userInfo.company || userInfo.name || "My Business",
-        userEmail: userInfo.email || localStorage.getItem("userEmail") || "No email provided",
-        userName: userInfo.name || "Anonymous User",
-        adImage: savedAdImage,
-        name: campaignData.name,
-        platforms: campaignData.platforms,
-        budget: campaignData.budget,
-        budgetType: campaignData.budgetType,
-        duration: campaignData.duration,
-        locations: campaignData.locations,
-        audience: campaignData.audience,
-        languages: campaignData.languages,
-        estimatedReach: campaignData.estimatedReach,
-        status: "pending" as const,
-        dateSubmitted: new Date().toISOString().split("T")[0],
-        paymentMethod: selectedMethod,
+        businessName:    userInfo.company || userInfo.name || "My Business",
+        userEmail:       userInfo.email || localStorage.getItem("userEmail") || "No email provided",
+        userName:        userInfo.name  || "Anonymous User",
+        userPhone:       userInfo.phone || "",
+        businessGoal:    uploadData.businessGoal     || "",
+        businessCategory:uploadData.businessCategory || "",
+        adImage:         savedAdImage,
+        name:            campaignData.name,
+        platforms:       campaignData.platforms,
+        platform:        campaignData.platforms?.[0] || "",
+        budget:          campaignData.budget,
+        budgetType:      campaignData.budgetType,
+        currency:        "INR",
+        duration:        campaignData.duration,
+        estimatedReach:  campaignData.estimatedReach,
+        startDatePreference: uploadData.startDatePreference || "",
+        adContentDescription: uploadData.adDescription || createAdData.adDescription || "",
+        adCaption:       createAdData.caption  || uploadData.caption  || "",
+        adCopyText:      createAdData.copyText || uploadData.copyText || "",
+        callToAction:    createAdData.callToAction || uploadData.callToAction || "",
+        creativeFiles:   uploadData.creativeFiles || [],
+        targeting: {
+          location:  campaignData.locations || [],
+          audience:  campaignData.audience  || [],
+          ageRange:  uploadData.ageRange    || "",
+          gender:    uploadData.gender      || "all",
+          interests: uploadData.interests   || [],
+          devices:   ["mobile", "desktop"],
+        },
+        language:    campaignData.languages || ["English"],
+        socialHandles: {
+          instagram: uploadData.instagram || "",
+          facebook:  uploadData.facebook  || "",
+          twitter:   uploadData.twitter   || "",
+          linkedin:  uploadData.linkedin  || "",
+        },
+        content: {
+          mediaUrl: savedAdImage,
+          caption:  createAdData.caption || uploadData.caption || "",
+          hashtags: uploadData.hashtags  || [],
+        },
+        links: {
+          website: userInfo.website || uploadData.website || "",
+          social:  "",
+        },
+        payment: {
+          paymentId,
+          transactionId,
+          amount:    campaignData.totalAmount || campaignData.budget,
+          method:    selectedMethod || "",
+          timestamp: new Date(),
+        },
+        paymentAmount:  campaignData.totalAmount || campaignData.budget,
+        paymentStatus:  "paid",
+        paymentId,
+        transactionId,
+        paymentDate,
+        status:          "pending" as "pending" | "in_review" | "approved" | "rejected",
+        dateSubmitted:   new Date().toISOString().split("T")[0],
         rejectionReason: "",
+        adminMessage:    "",
         analytics: {
-          impressions: 0,
-          reach: 0,
-          clicks: 0,
-          ctr: 0,
-          conversions: 0,
-          adSpend: 0,
-          roas: 0,
+          impressions: 0, reach: 0, clicks: 0,
+          ctr: 0, conversions: 0, adSpend: 0, roas: 0,
         },
       };
 
-      // Get existing campaigns array (supports both old and new format)
       const existingRaw = localStorage.getItem("userCampaigns");
       let campaigns: typeof newCampaign[] = [];
       if (existingRaw) {
         const parsed = JSON.parse(existingRaw);
-        // Handle legacy { inReview, history } format
         if (Array.isArray(parsed)) {
           campaigns = parsed;
         } else {
@@ -277,7 +290,20 @@ export default function PaymentPage() {
       campaigns.unshift(newCampaign);
       localStorage.setItem("userCampaigns", JSON.stringify(campaigns));
 
-      // Seed a demo admin notification
+      try {
+        const response = await fetch("http://localhost:5000/api/campaign/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newCampaign),
+        });
+        const data = await response.json();
+        if (data.token) {
+          localStorage.setItem("userCampaignToken", data.token);
+        }
+      } catch {
+        console.warn("Backend not available — campaign saved locally only.");
+      }
+
       const existingNotifs = localStorage.getItem("adminNotifications");
       const notifs = existingNotifs ? JSON.parse(existingNotifs) : [];
       const hasWelcomeNotif = notifs.some((n: { type: string }) => n.type === "submission_received");
@@ -297,7 +323,6 @@ export default function PaymentPage() {
         duration: 4000,
       });
 
-      // Show modal — no auto-redirect
       setShowSuccessModal(true);
     }, 2000);
   };
@@ -307,608 +332,234 @@ export default function PaymentPage() {
     const matches = v.match(/\d{4,16}/g);
     const match = (matches && matches[0]) || "";
     const parts = [];
-
     for (let i = 0, len = match.length; i < len; i += 4) {
       parts.push(match.substring(i, i + 4));
     }
-
-    if (parts.length) {
-      return parts.join(" ");
-    } else {
-      return value;
-    }
+    return parts.length ? parts.join(" ") : value;
   };
 
   const formatExpiryDate = (value: string) => {
     const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    if (v.length >= 2) {
-      return v.slice(0, 2) + "/" + v.slice(2, 4);
-    }
+    if (v.length >= 2) return v.slice(0, 2) + "/" + v.slice(2, 4);
     return v;
   };
 
+  // Scroll progress bar
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollBar = document.getElementById('scrollBarPayment');
+      if (scrollBar) {
+        const s = document.documentElement;
+        if (s.scrollHeight - s.clientHeight > 0) {
+          const p = (s.scrollTop / (s.scrollHeight - s.clientHeight)) * 100;
+          scrollBar.style.width = p + '%';
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <>
-    <PaymentSuccessModal
-      isOpen={showSuccessModal}
-      onConfirm={() => navigate("/dashboard/campaigns")}
-    />
-    <motion.div
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="min-h-screen bg-gradient-to-b from-[#0a0e27] via-[#0f1235] to-black"
-    >
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-cyan-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
+      <PaymentSuccessModal
+        isOpen={showSuccessModal}
+        onConfirm={() => navigate("/dashboard/campaigns")}
+      />
+      <div className="upload-page-wrapper">
+        <div className="scroll-bar" id="scrollBarPayment"></div>
+        <div className="cosmos">
+          <div className="orb orb1"></div>
+          <div className="orb orb2"></div>
+          <div className="orb orb3"></div>
+        </div>
+        <div className="grid-bg"></div>
+        <div className="depth-ring"></div>
+        <div className="depth-ring"></div>
+        <div className="depth-ring"></div>
 
-      {/* AI Circuit Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none">
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="circuit-payment" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-              <circle cx="50" cy="50" r="2" fill="#00ffff" />
-              <line x1="50" y1="50" x2="100" y2="50" stroke="#00ffff" strokeWidth="0.5" />
-              <line x1="50" y1="50" x2="50" y2="0" stroke="#00ffff" strokeWidth="0.5" />
-              <circle cx="0" cy="50" r="2" fill="#a855f7" />
-              <circle cx="50" cy="0" r="2" fill="#3b82f6" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#circuit-payment)" />
-        </svg>
-      </div>
+        <div className="page" style={{maxWidth:'860px'}}>
+          <button className="back" onClick={() => navigate("/ad-preview")}>← Back to Campaign Preview</button>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/ad-preview")}
-              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Campaign Preview
-            </Button>
-
-            <h1 className="text-4xl sm:text-5xl text-white mb-2 bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Complete Your Campaign Payment
-            </h1>
-            <p className="text-xl text-gray-400">
-              Secure payment to activate your AI-powered ad campaign
-            </p>
+          <div className="page-header">
+            <div className="page-eyebrow"><span className="eyebrow-dot"></span>SECURE CHECKOUT</div>
+            <div className="page-title">Complete Your<br/>Payment</div>
+            <div className="page-sub">Secure payment to activate your AI-powered ad campaign</div>
           </div>
 
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* LEFT COLUMN - Campaign Summary */}
-            <div className="lg:col-span-1">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="sticky top-8 p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-purple-900/20 to-cyan-900/20 border-2 border-purple-500/30 backdrop-blur-sm shadow-2xl shadow-purple-500/20"
-              >
-                <div className="flex items-center gap-2 mb-6">
-                  <Sparkles className="w-6 h-6 text-cyan-400" />
-                  <h3 className="text-xl text-white font-semibold">Campaign Summary</h3>
+          <div style={{display:'grid', gap:'20px', gridTemplateColumns:'1fr', width:'100%'}}>
+            
+            {/* SECTION 1 — Campaign Summary */}
+            <div className="section-card delay-0" style={{width:'100%'}}>
+              <div className="card-glow"></div>
+              <div className="section-label"><span className="section-label-dot"></span>01 — Campaign Summary</div>
+
+              <div className="stat-grid" style={{gridTemplateColumns:'repeat(2,1fr)', marginBottom:'20px'}}>
+                <div className="stat-card">
+                  <div className="stat-label">Budget</div>
+                  <div className="stat-val" style={{fontSize:'18px'}}>{campaignData.budget}</div>
+                  <div className="stat-sub">{campaignData.budgetType}</div>
                 </div>
-
-                <div className="space-y-4">
-                  {/* Campaign Name */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                    <p className="text-xs text-gray-400 mb-1">Campaign Name</p>
-                    <p className="text-white font-semibold">{campaignData.name}</p>
-                  </div>
-
-                  {/* Selected Platforms */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-cyan-500/20">
-                    <p className="text-xs text-gray-400 mb-2">Selected Platforms</p>
-                    <div className="flex flex-wrap gap-2">
-                      {campaignData.platforms.map((platform) => (
-                        <span
-                          key={platform}
-                          className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white text-xs"
-                        >
-                          {platform}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Campaign Budget */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                    <p className="text-xs text-gray-400 mb-1">
-                      Campaign Budget ({campaignData.budgetType})
-                    </p>
-                    <p className="text-2xl text-white font-bold">{campaignData.budget}</p>
-                  </div>
-
-                  {/* Duration */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-cyan-500/20">
-                    <p className="text-xs text-gray-400 mb-1">Campaign Duration</p>
-                    <p className="text-white font-semibold">{campaignData.duration}</p>
-                  </div>
-
-                  {/* Target Locations */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                    <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      Target Location
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {campaignData.locations.map((location) => (
-                        <span
-                          key={location}
-                          className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs"
-                        >
-                          {location}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Audience Category */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-cyan-500/20">
-                    <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      Audience Category
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {campaignData.audience.map((aud) => (
-                        <span
-                          key={aud}
-                          className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs"
-                        >
-                          {aud}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Selected Languages */}
-                  <div className="p-4 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                    <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                      <Languages className="w-3 h-3" />
-                      Selected Languages
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {campaignData.languages.map((lang) => (
-                        <span
-                          key={lang}
-                          className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs"
-                        >
-                          {lang}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Estimated Reach */}
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-cyan-400/50">
-                    <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      Estimated Reach
-                    </p>
-                    <p className="text-lg text-cyan-400 font-bold">{campaignData.estimatedReach}</p>
-                  </div>
-
-                  {/* Status Badge */}
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-400/50 shadow-lg shadow-green-500/30">
-                    <div className="flex items-center justify-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-400 animate-pulse" />
-                      <span className="text-green-400 font-semibold">Ready to Launch</span>
-                    </div>
-                  </div>
+                <div className="stat-card">
+                  <div className="stat-label">Duration</div>
+                  <div className="stat-val" style={{fontSize:'18px', color:'var(--teal)'}}>{campaignData.duration}</div>
+                  <div className="stat-sub">run time</div>
                 </div>
-              </motion.div>
+                <div className="stat-card" style={{gridColumn:'1 / -1', background:'rgba(99,51,255,0.06)', borderColor:'rgba(99,51,255,0.2)'}}>
+                  <div className="stat-label" style={{color:'#a78bfa'}}>Total Amount</div>
+                  <div className="stat-val" style={{fontSize:'26px', color:'#fff'}}>{campaignData.totalAmount}</div>
+                </div>
+              </div>
+
+              {[
+                { label: '🎯 Campaign Name', value: campaignData.name },
+                { label: '📈 Estimated Reach', value: campaignData.estimatedReach },
+              ].map(row => (
+                <div key={row.label} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
+                  <span style={{fontSize:'12px', color:'var(--muted)'}}>{row.label}</span>
+                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Syne',sans-serif", fontWeight:600}}>{row.value}</span>
+                </div>
+              ))}
             </div>
 
-            {/* RIGHT COLUMN - Payment Methods */}
-            <div className="lg:col-span-2 space-y-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <h2 className="text-2xl text-white mb-6 flex items-center gap-2">
-                  <CreditCard className="w-6 h-6 text-cyan-400" />
-                  Choose Your Payment Method
-                </h2>
+            {/* SECTION 2 — Payment Method */}
+            <div className="section-card delay-1" style={{width:'100%'}}>
+              <div className="card-glow"></div>
+              <div className="section-label"><span className="section-label-dot"></span>02 — Payment Method</div>
 
-                {/* Payment Method Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {/* UPI Payment */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedMethod("upi")}
-                    className={`p-6 rounded-2xl border-2 transition-all text-left ${
-                      selectedMethod === "upi"
-                        ? "bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-cyan-400/50 shadow-lg shadow-cyan-500/30"
-                        : "bg-gray-900/50 border-purple-500/30 hover:border-purple-400/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        selectedMethod === "upi"
-                          ? "bg-gradient-to-r from-purple-600 to-cyan-600"
-                          : "bg-gray-800"
-                      }`}>
-                        <Smartphone className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-white font-semibold">UPI Payments</h3>
-                        <p className="text-xs text-gray-400">Instant UPI payment</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">GPay</div>
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">PhonePe</div>
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">Paytm</div>
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">BHIM</div>
-                    </div>
-                  </motion.button>
-
-                  {/* Card Payment */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedMethod("card")}
-                    className={`p-6 rounded-2xl border-2 transition-all text-left ${
-                      selectedMethod === "card"
-                        ? "bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-cyan-400/50 shadow-lg shadow-cyan-500/30"
-                        : "bg-gray-900/50 border-purple-500/30 hover:border-purple-400/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        selectedMethod === "card"
-                          ? "bg-gradient-to-r from-purple-600 to-cyan-600"
-                          : "bg-gray-800"
-                      }`}>
-                        <CreditCard className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Card Payments</h3>
-                        <p className="text-xs text-gray-400">Credit / Debit Card</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">Visa</div>
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">MasterCard</div>
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">RuPay</div>
-                    </div>
-                  </motion.button>
-
-                  {/* Wallets */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedMethod("wallet")}
-                    className={`p-6 rounded-2xl border-2 transition-all text-left relative overflow-hidden ${
-                      selectedMethod === "wallet"
-                        ? "bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-cyan-400/50 shadow-lg shadow-cyan-500/30"
-                        : "bg-gray-900/50 border-purple-500/30 hover:border-purple-400/50"
-                    }`}
-                  >
-                    <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-yellow-500/20 border border-yellow-400/50">
-                      <span className="text-xs text-yellow-400">Coming Soon</span>
-                    </div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        selectedMethod === "wallet"
-                          ? "bg-gradient-to-r from-purple-600 to-cyan-600"
-                          : "bg-gray-800"
-                      }`}>
-                        <Wallet className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-white font-semibold">Digital Wallets</h3>
-                        <p className="text-xs text-gray-400">Quick wallet payments</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">Paytm</div>
-                      <div className="px-2 py-1 rounded bg-gray-800/50 text-xs text-gray-300">PhonePe</div>
-                    </div>
-                  </motion.button>
+              <div className="platform-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', marginBottom:'24px'}}>
+                <div className={`plat-card ${selectedMethod === 'upi' ? 'active' : ''}`} onClick={() => setSelectedMethod('upi')} style={{textAlign:'center'}}>
+                  <div style={{fontSize:'28px', marginBottom:'8px'}}>📱</div>
+                  <div className="plat-name">UPI</div>
+                  <div className="plat-time">GPay, PhonePe, etc.</div>
                 </div>
+                <div className={`plat-card ${selectedMethod === 'card' ? 'active' : ''}`} onClick={() => setSelectedMethod('card')} style={{textAlign:'center'}}>
+                  <div style={{fontSize:'28px', marginBottom:'8px'}}>💳</div>
+                  <div className="plat-name">Card</div>
+                  <div className="plat-time">Credit or Debit</div>
+                </div>
+                <div className={`plat-card ${selectedMethod === 'wallet' ? 'active' : ''}`} onClick={() => setSelectedMethod('wallet')} style={{textAlign:'center', position:'relative'}}>
+                  <div style={{position:'absolute', top:'6px', right:'6px', background:'rgba(234,179,8,0.2)', color:'#facc15', fontSize:'9px', padding:'2px 6px', borderRadius:'10px'}}>Soon</div>
+                  <div style={{fontSize:'28px', marginBottom:'8px', opacity:0.5}}>👜</div>
+                  <div className="plat-name" style={{opacity:0.5}}>Wallet</div>
+                  <div className="plat-time" style={{opacity:0.5}}>Paytm, etc.</div>
+                </div>
+              </div>
 
-                {/* Payment Details Form */}
-                {selectedMethod && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-purple-900/20 to-cyan-900/20 border-2 border-purple-500/30 backdrop-blur-sm"
-                  >
-                    {selectedMethod === "upi" && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg text-white font-semibold mb-4">Enter UPI Details</h3>
-                        <div>
-                          <Label htmlFor="upi" className="text-gray-300">UPI ID</Label>
-                          <Input
-                            id="upi"
-                            placeholder="yourname@upi"
-                            value={upiId}
-                            onChange={(e) => setUpiId(e.target.value)}
-                            className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          />
-                        </div>
-                        <div className="flex items-start gap-2 p-3 rounded-lg bg-cyan-500/10 border border-cyan-400/30">
-                          <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-gray-300">
-                            You will be redirected to your UPI app to complete the payment
-                          </p>
-                        </div>
-                      </div>
-                    )}
+              {selectedMethod === 'upi' && (
+                <div className="input-group">
+                  <label className="input-label">Enter UPI ID</label>
+                  <input className="input-field" placeholder="yourname@upi" value={upiId} onChange={e => setUpiId(e.target.value)} />
+                </div>
+              )}
 
-                    {selectedMethod === "card" && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg text-white font-semibold mb-4">Enter Card Details</h3>
-                        <div>
-                          <Label htmlFor="cardNumber" className="text-gray-300">Card Number</Label>
-                          <Input
-                            id="cardNumber"
-                            placeholder="1234 5678 9012 3456"
-                            value={cardNumber}
-                            onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                            maxLength={19}
-                            className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cardName" className="text-gray-300">Cardholder Name</Label>
-                          <Input
-                            id="cardName"
-                            placeholder="John Doe"
-                            value={cardName}
-                            onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                            className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="expiry" className="text-gray-300">Expiry Date</Label>
-                            <Input
-                              id="expiry"
-                              placeholder="MM/YY"
-                              value={expiryDate}
-                              onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-                              maxLength={5}
-                              className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="cvv" className="text-gray-300">CVV</Label>
-                            <Input
-                              id="cvv"
-                              placeholder="123"
-                              type="password"
-                              value={cvv}
-                              onChange={(e) => setCvv(e.target.value.replace(/\D/g, ""))}
-                              maxLength={3}
-                              className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedMethod === "wallet" && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-center py-8">
-                          <div className="text-center">
-                            <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                            <p className="text-gray-400">Wallet payments coming soon!</p>
-                            <p className="text-sm text-gray-500 mt-2">Please select another payment method</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Security & Trust */}
-                <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-400/30 backdrop-blur-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center shadow-lg shadow-green-500/30">
-                      <Lock className="w-5 h-5 text-green-400" />
+              {selectedMethod === 'card' && (
+                <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+                  <div className="input-group">
+                    <label className="input-label">Card Number</label>
+                    <input className="input-field" placeholder="0000 0000 0000 0000" value={cardNumber} onChange={e => setCardNumber(formatCardNumber(e.target.value))} maxLength={19} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Cardholder Name</label>
+                    <input className="input-field" placeholder="John Doe" value={cardName} onChange={e => setCardName(e.target.value.toUpperCase())} />
+                  </div>
+                  <div style={{display:'flex', gap:'12px'}}>
+                    <div className="input-group" style={{flex:1}}>
+                      <label className="input-label">Expiry</label>
+                      <input className="input-field" placeholder="MM/YY" value={expiryDate} onChange={e => setExpiryDate(formatExpiryDate(e.target.value))} maxLength={5} />
                     </div>
-                    <div>
-                      <h4 className="text-white font-semibold flex items-center gap-2">
-                        100% Secure & Encrypted Payments
-                        <Shield className="w-4 h-4 text-green-400" />
-                      </h4>
-                      <p className="text-xs text-gray-400">Powered by trusted payment gateway</p>
+                    <div className="input-group" style={{flex:1}}>
+                      <label className="input-label">CVV</label>
+                      <input type="password" className="input-field" placeholder="123" value={cvv} onChange={e => setCvv(e.target.value.replace(/\D/g, ""))} maxLength={3} />
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* OTP Verification Section */}
-                {selectedMethod && selectedMethod !== "wallet" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-orange-900/10 to-yellow-900/10 border-2 border-orange-500/30 backdrop-blur-sm"
-                  >
-                    <div className="flex items-center gap-2 mb-4">
-                      <Smartphone className="w-5 h-5 text-orange-400" />
-                      <h3 className="text-lg text-white font-semibold">
-                        {selectedMethod === "upi" ? "UPI Verification" : "Mobile Verification"}
-                      </h3>
-                    </div>
-
-                    {!showOtpInput ? (
-                      <div className="space-y-4">
-                        <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-500/10 border border-orange-400/30">
-                          <Info className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-gray-300">
-                            {selectedMethod === "upi" ? (
-                              <>
-                                For security, we'll send an OTP to your UPI linked number: <span className="text-orange-400 font-semibold">{upiId || "your-upi@bank"}</span>
-                              </>
-                            ) : (
-                              <>
-                                For security, we'll send an OTP to your registered mobile number: <span className="text-orange-400 font-semibold">{userPhone}</span>
-                              </>
-                            )}
-                          </p>
-                        </div>
-                        <Button
-                          onClick={handleSendOtp}
-                          disabled={isSendingOtp}
-                          className="w-full bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-700 hover:to-yellow-700 text-white rounded-xl shadow-lg shadow-orange-500/50 transition-all hover:scale-105 disabled:opacity-50"
-                        >
-                          {isSendingOtp ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                              Sending OTP...
-                            </div>
-                          ) : (
-                            <>
-                              <Smartphone className="w-5 h-5 mr-2" />
-                              {selectedMethod === "upi" 
-                                ? `Send OTP to ${upiId || "UPI"}` 
-                                : `Send OTP to ${userPhone}`
-                              }
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {!isOtpVerified ? (
-                          <>
-                            <div className="flex items-start gap-2 p-3 rounded-lg bg-cyan-500/10 border border-cyan-400/30">
-                              <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-gray-300">
-                                {selectedMethod === "upi" ? (
-                                  <>
-                                    OTP sent successfully to UPI linked number for <span className="text-cyan-400 font-semibold">{upiId}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    OTP sent successfully to <span className="text-cyan-400 font-semibold">{userPhone}</span>
-                                  </>
-                                )}
-                              </p>
-                            </div>
-                            <div>
-                              <Label htmlFor="otp" className="text-gray-300">Enter 6-Digit OTP</Label>
-                              <Input
-                                id="otp"
-                                placeholder="000000"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                                maxLength={6}
-                                className="mt-2 bg-gray-900/50 border-purple-500/30 text-white text-center text-2xl tracking-widest focus:border-cyan-400/50"
-                              />
-                            </div>
-                            <div className="flex gap-3">
-                              <Button
-                                onClick={handleVerifyOtp}
-                                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-lg shadow-green-500/50 transition-all hover:scale-105"
-                              >
-                                <CheckCircle2 className="w-5 h-5 mr-2" />
-                                Verify OTP
-                              </Button>
-                              <Button
-                                onClick={handleSendOtp}
-                                variant="outline"
-                                className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 rounded-xl"
-                              >
-                                Resend OTP
-                              </Button>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-400/50">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-green-500/30 flex items-center justify-center">
-                                <CheckCircle2 className="w-6 h-6 text-green-400 animate-pulse" />
-                              </div>
-                              <div>
-                                <p className="text-white font-semibold">OTP Verified Successfully!</p>
-                                <p className="text-sm text-gray-300">You can now proceed with the payment</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Total Amount Summary */}
-                <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border-2 border-purple-500/30 backdrop-blur-sm">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-gray-400">Campaign Budget</span>
-                    <span className="text-white font-semibold">{campaignData.budget}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-gray-400">Duration</span>
-                    <span className="text-white font-semibold">{campaignData.duration}</span>
-                  </div>
-                  <div className="border-t border-gray-700/50 pt-4 mt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xl text-white font-semibold">Total Amount</span>
-                      <span className="text-3xl text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text font-bold">
-                        {campaignData.totalAmount}
-                      </span>
-                    </div>
-                  </div>
+              {selectedMethod === 'wallet' && (
+                <div style={{textAlign:'center', padding:'20px', color:'var(--muted)'}}>
+                  Wallet payments coming soon!
                 </div>
-
-                {/* Call to Action */}
-                <Button
-                  onClick={handlePayment}
-                  disabled={!selectedMethod || selectedMethod === "wallet" || isProcessing}
-                  size="lg"
-                  className="w-full mt-6 px-12 py-6 bg-gradient-to-r from-purple-600 via-cyan-600 to-blue-600 hover:from-purple-700 hover:via-cyan-700 hover:to-blue-700 text-white rounded-xl shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {isProcessing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Processing Payment...
-                    </div>
-                  ) : (
-                    <>
-                      <Lock className="w-5 h-5 mr-2" />
-                      Pay & Launch Campaign
-                    </>
-                  )}
-                </Button>
-
-                {/* Footer Note */}
-                <p className="text-center text-sm text-gray-400 mt-4">
-                  Your campaign will go live immediately after successful payment.
-                </p>
-              </motion.div>
+              )}
             </div>
+
+            {/* SECTION 3 — OTP Verification */}
+            {selectedMethod && selectedMethod !== "wallet" && (
+              <div className="section-card delay-2" style={{width:'100%', borderColor: isOtpVerified ? 'rgba(52,211,153,0.3)' : 'var(--border)'}}>
+                <div className="card-glow"></div>
+                <div className="section-label" style={{color: isOtpVerified ? '#34d399' : 'var(--muted)'}}>
+                  <span className="section-label-dot" style={{background: isOtpVerified ? '#34d399' : 'linear-gradient(135deg, var(--purple), var(--teal))'}}></span>
+                  03 — Verification
+                </div>
+
+                {!showOtpInput ? (
+                  <div style={{textAlign:'center'}}>
+                    <p style={{fontSize:'13px', color:'var(--muted)', marginBottom:'16px'}}>
+                      For security, we'll send an OTP to verify your payment.
+                    </p>
+                    <button className="btn-ai btn-ai-yes" onClick={handleSendOtp} disabled={isSendingOtp} style={{width:'100%'}}>
+                      {isSendingOtp ? 'Sending OTP...' : `Send OTP`}
+                    </button>
+                  </div>
+                ) : !isOtpVerified ? (
+                  <div style={{textAlign:'center'}}>
+                    <div className="input-group" style={{marginBottom:'16px'}}>
+                      <label className="input-label" style={{justifyContent:'center'}}>Enter 6-Digit OTP</label>
+                      <input className="input-field" style={{textAlign:'center', fontSize:'24px', letterSpacing:'8px', padding:'12px'}} placeholder="000000" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))} maxLength={6} />
+                    </div>
+                    <div style={{display:'flex', gap:'10px'}}>
+                      <button className="btn-ai btn-ai-no" onClick={handleSendOtp} style={{flex:1}}>Resend</button>
+                      <button className="btn-ai btn-ai-yes" onClick={handleVerifyOtp} style={{flex:2}}>Verify</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{textAlign:'center', color:'#34d399', fontSize:'14px', fontWeight:600}}>
+                    ✓ OTP Verified Successfully!
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Trust Banner */}
+            <div className="section-card delay-3" style={{width:'100%', background:'linear-gradient(135deg, rgba(6,214,199,0.08), rgba(99,51,255,0.08))', borderColor:'rgba(6,214,199,0.3)'}}>
+              <div className="card-glow"></div>
+              <div className="section-label" style={{color:'#06d6c7'}}>
+                <span className="section-label-dot" style={{background:'#06d6c7'}}></span>
+                04 — Your Savings with AI
+              </div>
+
+              <div className="stat-grid" style={{gridTemplateColumns:'repeat(2,1fr)'}}>
+                <div className="stat-card" style={{border:'1px solid rgba(6,214,199,0.2)'}}>
+                  <div className="stat-label">💰 Money Saved</div>
+                  <div className="stat-val" style={{fontSize:'22px', color:'#06d6c7'}}>~₹45,000</div>
+                  <div className="stat-sub">on agency & creative fees</div>
+                </div>
+                <div className="stat-card" style={{border:'1px solid rgba(167,139,250,0.2)'}}>
+                  <div className="stat-label">⏳ Time Saved</div>
+                  <div className="stat-val" style={{fontSize:'22px', color:'#a78bfa'}}>~14 Days</div>
+                  <div className="stat-sub">on editing & campaign setup</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{background:'rgba(52,211,153,0.05)', border:'1px solid rgba(52,211,153,0.2)', borderRadius:'12px', padding:'12px 16px', fontSize:'12px', color:'var(--muted)', display:'flex', gap:'8px', alignItems:'center', justifyContent:'center'}}>
+              <span style={{color:'#34d399'}}>🔒</span>
+              <span>100% Secure & Encrypted Payments powered by trusted gateways.</span>
+            </div>
+
           </div>
+
+          <div style={{height:'120px'}}></div>
+
+          <div className="float-submit">
+            <button className="submit-btn" onClick={handlePayment} disabled={!selectedMethod || selectedMethod === "wallet" || isProcessing}>
+              <span className="submit-icon">🚀</span>
+              {isProcessing ? 'Processing...' : 'Pay & Launch Campaign'}
+            </button>
+          </div>
+
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-purple-500/20 bg-gray-900/50 backdrop-blur-sm py-8 px-4 mt-16">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-400">
-            <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent font-semibold">
-              VULPINIX AI 1.0
-            </span>
-            {" "}— Automate Your Digital World
-          </p>
-        </div>
-      </footer>
-    </motion.div>
-    </>  
+    </>
   );
 }

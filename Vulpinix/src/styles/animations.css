@@ -1,0 +1,403 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   VULPINIX AI — GLOBAL ANIMATION ENGINE
+   Pure CSS keyframes + IntersectionObserver classes. No new npm packages.
+   All animations use transform/opacity only (GPU-composited).
+   Wrapped in prefers-reduced-motion where appropriate.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Smooth scroll ────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
+/* ── Scroll progress bar ──────────────────────────────────────────────────── */
+#vx-scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, #6333ff, #06d6c7);
+  z-index: 9999;
+  pointer-events: none;
+  transition: width 0.05s linear;
+}
+
+/* ── Custom cursor ────────────────────────────────────────────────────────── */
+#vx-cursor-dot {
+  position: fixed;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: background 0.2s;
+  will-change: transform;
+}
+#vx-cursor-ring {
+  position: fixed;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  pointer-events: none;
+  z-index: 9997;
+  transform: translate(-50%, -50%);
+  transition: border-color 0.2s, transform 0.12s ease-out;
+  will-change: transform;
+}
+#vx-cursor-ring.vx-cursor-hover {
+  border-color: #a78bfa;
+  transform: translate(-50%, -50%) scale(1.5);
+}
+@media (hover: none) {
+  #vx-cursor-dot, #vx-cursor-ring { display: none; }
+}
+
+/* ── Global orbs (fixed, behind everything) ───────────────────────────────── */
+.vx-orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  z-index: 0;
+  will-change: transform;
+}
+.vx-orb-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(99,51,255,0.15) 0%, transparent 70%);
+  top: -200px; left: -200px;
+  animation: orbFloat1 12s ease-in-out infinite;
+}
+.vx-orb-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,212,200,0.1) 0%, transparent 70%);
+  bottom: -150px; right: -150px;
+  animation: orbFloat2 15s ease-in-out infinite;
+}
+.vx-orb-3 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  animation: orbFloat3 18s ease-in-out infinite;
+}
+
+/* ── Global grid overlay (animates across entire body) ────────────────────── */
+.vx-grid-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(99,51,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,51,255,0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: gridMove 20s linear infinite;
+}
+
+/* ── IntersectionObserver reveal classes ─────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .vx-reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1),
+                transform 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+  .vx-reveal.vx-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .vx-reveal-left {
+    opacity: 0;
+    transform: translateX(-40px);
+    transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1),
+                transform 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+  .vx-reveal-left.vx-visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .vx-reveal-right {
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1),
+                transform 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+  .vx-reveal-right.vx-visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .vx-reveal-scale {
+    opacity: 0;
+    transform: scale(0.88);
+    transition: opacity 0.6s cubic-bezier(0.16,1,0.3,1),
+                transform 0.6s cubic-bezier(0.16,1,0.3,1);
+  }
+  .vx-reveal-scale.vx-visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+  /* stagger delays */
+  .vx-delay-1 { transition-delay: 0.1s !important; }
+  .vx-delay-2 { transition-delay: 0.2s !important; }
+  .vx-delay-3 { transition-delay: 0.3s !important; }
+  .vx-delay-4 { transition-delay: 0.4s !important; }
+  .vx-delay-5 { transition-delay: 0.5s !important; }
+  .vx-delay-6 { transition-delay: 0.6s !important; }
+}
+
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(60px, 80px); }
+}
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(-80px, -60px); }
+}
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50%       { transform: translate(-45%, -55%); }
+}
+@keyframes gridMove {
+  from { background-position: 0 0; }
+  to   { background-position: 50px 50px; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-8px) rotate(-0.5deg); }
+  66%       { transform: translateY(-4px) rotate(0.5deg); }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+@keyframes shimmerProgress {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.7; transform: scale(0.95); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+@keyframes rotateBorder {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+@keyframes drawLine {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes stepGlow {
+  0%, 100% { text-shadow: 0 0 12px rgba(99,51,255,0); }
+  50%       { text-shadow: 0 0 20px rgba(99,51,255,0.7); }
+}
+@keyframes navbarGlow {
+  0%   { box-shadow: 0 1px 0 0 rgba(99,51,255,0.4); }
+  50%  { box-shadow: 0 1px 0 0 rgba(6,214,199,0.6); }
+  100% { box-shadow: 0 1px 0 0 rgba(99,51,255,0.4); }
+}
+@keyframes barGrow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+@keyframes countPulse {
+  0%  { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100%{ transform: scale(1); }
+}
+@keyframes iconSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes badgeShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes deltaPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+@keyframes wordFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Navbar shimmer border ────────────────────────────────────────────────── */
+.vx-nav-shimmer {
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #6333ff, #06d6c7, #6333ff, transparent);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.vx-nav-shimmer.vx-nav-scrolled { opacity: 1; }
+
+/* ── Nav link hover underline ─────────────────────────────────────────────── */
+.vx-nav-link {
+  position: relative;
+  text-decoration: none;
+}
+.vx-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, #a78bfa, #06d6c7);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.vx-nav-link:hover::after { transform: scaleX(1); }
+
+/* ── Badge animated border ────────────────────────────────────────────────── */
+.vx-badge-animated {
+  position: relative;
+  overflow: hidden;
+}
+.vx-badge-animated::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle, 0deg), #6333ff, #06d6c7, #6333ff);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotateBorder 3s linear infinite;
+}
+
+/* ── Gradient text animated ───────────────────────────────────────────────── */
+.vx-gradient-text-anim {
+  background: linear-gradient(270deg, #a78bfa, #38bdf8, #6333ff, #06d6c7);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 4s ease infinite;
+}
+
+/* ── Section heading underline draw ──────────────────────────────────────── */
+.vx-heading-underline {
+  position: relative;
+  display: inline-block;
+}
+.vx-heading-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -8px; left: 50%; right: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, #6333ff, #06d6c7);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+.vx-heading-underline.vx-visible::after {
+  transform: scaleX(1);
+  left: 0; right: 0;
+}
+
+/* ── Dashboard card float ────────────────────────────────────────────────── */
+.vx-card-float {
+  animation: floatCard 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ── Progress bar animated (width from 0 via CSS var) ─────────────────────── */
+.vx-bar-animated {
+  width: 0%;
+  transition: width 1s cubic-bezier(0.16,1,0.3,1);
+}
+.vx-bar-animated.vx-visible {
+  width: var(--bar-target, 100%);
+}
+
+/* ── Platform bar chart bars ──────────────────────────────────────────────── */
+.vx-chart-bar {
+  transform-origin: bottom;
+  transform: scaleY(0);
+  transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+.vx-chart-bar.vx-visible { transform: scaleY(1); }
+
+/* ── Step card hover icon spin ────────────────────────────────────────────── */
+.vx-step-card:hover .vx-step-icon {
+  animation: iconSpin 0.6s ease;
+}
+.vx-step-card:hover .vx-step-num {
+  animation: stepGlow 1s ease;
+  opacity: 1 !important;
+}
+
+/* ── Pricing Pro card glow ────────────────────────────────────────────────── */
+.vx-pro-card {
+  box-shadow: 0 0 40px rgba(99,51,255,0.25), 0 0 0 1px rgba(99,51,255,0.3);
+  animation: countPulse 4s ease-in-out infinite;
+}
+
+/* ── Most Popular badge shimmer ───────────────────────────────────────────── */
+.vx-popular-badge {
+  background: linear-gradient(90deg, #7c3aed, #06b6d4, #7c3aed);
+  background-size: 200% auto;
+  animation: badgeShimmer 2.5s linear infinite;
+}
+
+/* ── Delta badges pulse ───────────────────────────────────────────────────── */
+.vx-delta { animation: deltaPulse 2s ease-in-out infinite; }
+
+/* ── Stat counter pop ─────────────────────────────────────────────────────── */
+.vx-count-done { animation: countPulse 0.4s ease; }
+
+/* ── Social icon hover ────────────────────────────────────────────────────── */
+.vx-social-icon {
+  transition: all 0.2s ease;
+}
+.vx-social-icon:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 0 16px rgba(139,92,246,0.5);
+  border-color: rgba(139,92,246,0.7) !important;
+}
+
+/* ── Divider shimmer ──────────────────────────────────────────────────────── */
+.vx-divider-shimmer {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #6333ff, #06d6c7, transparent);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ── Word-by-word hero heading animation ─────────────────────────────────── */
+.vx-word {
+  display: inline-block;
+  opacity: 0;
+  animation: wordFadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* ── Typing cursor ────────────────────────────────────────────────────────── */
+.vx-cursor::after {
+  content: '|';
+  display: inline-block;
+  animation: blink 1s step-end infinite;
+  color: #06d6c7;
+  margin-left: 2px;
+}
+
+/* ── Cursor: body override ────────────────────────────────────────────────── */
+@media (pointer: fine) {
+  body { cursor: none; }
+  a, button { cursor: none; }
+}

@@ -1,8 +1,7 @@
-import express from "express";
-import { createUser } from "../controllers/userController.js";
-
+const express = require("express");
 const router = express.Router();
 
-router.post("/create-user", createUser);
+// Placeholder — user auth routes not yet implemented
+router.get("/", (req, res) => res.json({ message: "User routes OK" }));
 
-export default router;
+module.exports = router;

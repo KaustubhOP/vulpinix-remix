@@ -5104,3 +5104,75 @@ html {
   animation-delay: 1.5s;
 }
 
+/* ═══════════════════════════════════════════════════
+   CUSTOM CURSOR
+═══════════════════════════════════════════════════ */
+* {
+  cursor: none !important;
+}
+
+/* Small dot — follows mouse exactly */
+#cursor-dot {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  background: #00f0ff; /* Cyber cyan */
+  box-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff;
+  pointer-events: none;
+  z-index: 99999;
+  margin-left: -3px; /* Centering */
+  margin-top: -3px;
+  transform: rotate(45deg); /* Diamond shape */
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Outer ring — smoothly trails */
+#cursor-ring {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px dashed #bc13fe; /* Neon purple */
+  pointer-events: none;
+  z-index: 99998;
+  margin-left: -22px; /* Centering overrides dynamic left/top offsets cleanly */
+  margin-top: -22px;
+  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, background 0.3s ease, margin 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: vx-radar-spin 8s linear infinite; /* Constant spinning radar effect */
+}
+
+@keyframes vx-radar-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* HOVER STATE — on buttons, links, clickable elements */
+body.cursor-hover #cursor-dot {
+  transform: rotate(135deg) scale(0);
+  opacity: 0;
+}
+body.cursor-hover #cursor-ring {
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  margin-top: -32px;
+  border-style: solid;
+  border-color: #00f0ff;     /* Shift to cyan */
+  background: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) inset, 0 0 15px rgba(0, 240, 255, 0.3);
+  animation: vx-radar-spin 3s linear infinite reverse; /* Spin backwards, faster on hover! */
+}
+
+/* CLICK STATE */
+body.cursor-click #cursor-dot {
+  transform: rotate(45deg) scale(0.5);
+}
+body.cursor-click #cursor-ring {
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  margin-top: -18px;
+  border-color: #ff0055;     /* Hot Pink blast */
+  background: rgba(255, 0, 85, 0.25);
+  box-shadow: 0 0 20px rgba(255, 0, 85, 0.5) inset, 0 0 20px rgba(255, 0, 85, 0.5);
+}

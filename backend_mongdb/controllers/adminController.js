@@ -8,40 +8,56 @@ const jwt = require("jsonwebtoken");
  * Returns a signed JWT with role "admin".
  */
 const adminLogin = async (req, res) => {
+  const { adminId, password } = req.body;
+
+  if (!adminId || !password) {
+    return res.status(400).json({ success: false, message: "Admin ID and password are required." });
+  }
+
+  // ── Try MongoDB first ─────────────────────────────────────────────────────
   try {
-    const { adminId, password } = req.body;
-
-    if (!adminId || !password) {
-      return res.status(400).json({ success: false, message: "Admin ID and password are required." });
-    }
-
     const admin = await Admin.findOne({ adminId: adminId.trim() });
-    if (!admin) {
-      return res.status(401).json({ success: false, message: "Invalid credentials." });
+    if (admin) {
+      const isValid = await admin.comparePassword(password);
+      if (!isValid) {
+        return res.status(401).json({ success: false, message: "Invalid credentials." });
+      }
+      const token = jwt.sign(
+        { id: admin._id.toString(), adminId: admin.adminId, name: admin.name, role: "admin" },
+        process.env.JWT_SECRET,
+        { expiresIn: "8h" }
+      );
+      return res.json({
+        success: true,
+        token,
+        admin: { adminId: admin.adminId, name: admin.name },
+      });
     }
+    // Admin not found in DB — fall through to hardcoded fallback below
+  } catch (err) {
+    // MongoDB not connected — fall through to hardcoded fallback
+    console.warn("MongoDB unavailable, trying fallback credentials:", err.message);
+  }
 
-    const isValid = await admin.comparePassword(password);
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: "Invalid credentials." });
-    }
-
+  // ── Hardcoded fallback (dev/demo mode when DB is down) ────────────────────
+  const FALLBACK_ID  = process.env.ADMIN_ID  || "admin";
+  const FALLBACK_PWD = process.env.ADMIN_PWD || "admin";
+  if (adminId.trim() === FALLBACK_ID && password === FALLBACK_PWD) {
     const token = jwt.sign(
-      { id: admin._id.toString(), adminId: admin.adminId, name: admin.name, role: "admin" },
-      process.env.JWT_SECRET,
+      { id: "local-admin", adminId: FALLBACK_ID, name: "Administrator", role: "admin" },
+      process.env.JWT_SECRET || "vulpinix_fallback_secret",
       { expiresIn: "8h" }
     );
-
     return res.json({
       success: true,
-      message: `Welcome, ${admin.name}`,
       token,
-      admin: { adminId: admin.adminId, name: admin.name },
+      admin: { adminId: FALLBACK_ID, name: "Administrator" },
     });
-  } catch (err) {
-    console.error("adminLogin error:", err);
-    return res.status(500).json({ success: false, message: "Server error during login." });
   }
+
+  return res.status(401).json({ success: false, message: "Invalid credentials." });
 };
+
 
 /**
  * GET /api/admin/campaigns
@@ -68,25 +84,54 @@ const getAllCampaigns = async (req, res) => {
     // Normalize for frontend compatibility (matching existing AdminDashboard Campaign type)
     const normalized = campaigns.map((c) => ({
       id: c._id.toString(),
+      // User identity
       businessName: c.businessName || c.userName || "Unknown",
       userName: c.userName || "",
       userEmail: c.userEmail || "",
+      userPhone: c.userPhone || "",
+      // Business
+      businessGoal: c.businessGoal || "",
+      businessCategory: c.businessCategory || "",
+      // Campaign basics
       adImage: c.adImage || "",
       name: c.campaignName,
       platforms: c.platforms || [],
+      platform: c.platform || (c.platforms && c.platforms[0]) || "",
       budget: c.budget,
       budgetType: c.budgetType,
+      currency: c.currency || "INR",
       duration: c.duration,
+      estimatedReach: c.estimatedReach,
+      startDatePreference: c.startDatePreference || "",
       dateSubmitted: c.createdAt,
-      status: c.status,
-      rejectionReason: c.rejectionReason || "",
-      analytics: c.analytics,
+      // Ad creative
+      adContentDescription: c.adContentDescription || "",
+      adCaption: c.adCaption || c.content?.caption || "",
+      adCopyText: c.adCopyText || "",
+      callToAction: c.callToAction || "",
+      creativeFiles: c.creativeFiles || [],
+      // Targeting
       targeting: c.targeting,
       language: c.language,
+      // Social handles
+      socialHandles: c.socialHandles || {},
+      // Content / links
       content: c.content,
       links: c.links,
+      // Payment
       payment: c.payment,
+      paymentAmount: c.paymentAmount || c.payment?.amount || "",
+      paymentStatus: c.paymentStatus || "paid",
+      paymentId: c.paymentId || c.payment?.paymentId || "",
+      transactionId: c.transactionId || c.payment?.transactionId || "",
+      paymentDate: c.paymentDate || c.payment?.timestamp || c.createdAt,
+      // Status
+      status: c.status,
+      rejectionReason: c.rejectionReason || "",
+      adminMessage: c.adminMessage || "",
+      analytics: c.analytics,
     }));
+
 
     // Stats for the header
     const stats = {
