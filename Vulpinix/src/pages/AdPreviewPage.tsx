@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
+import { PieChart as RechartsPie, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { 
   ArrowLeft, 
   Smartphone, 
@@ -24,7 +25,8 @@ import {
   DollarSign,
   Users,
   ChevronDown,
-  Check
+  Check,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { VulpinixLogo } from "../components/VulpinixLogo";
@@ -37,6 +39,7 @@ export default function AdPreviewPage() {
   // Platform Selection
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("instagram-feed");
   const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
+  const [showPieChart, setShowPieChart] = useState(false);
   const platformDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load Data from localStorage
@@ -491,10 +494,31 @@ export default function AdPreviewPage() {
                 ))}
               </div>
 
-              <div style={{ marginTop: 40, padding: 24, borderRadius: 24, background: "rgba(167, 139, 250, 0.05)", border: "1px dashed rgba(167, 139, 250, 0.3)" }}>
+              {/* Platform Distribution — clickable, opens pie chart modal */}
+              <motion.div
+                onClick={() => setShowPieChart(true)}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ marginTop: 40, padding: 24, borderRadius: 24, background: "rgba(167,139,250,0.06)", border: "1px dashed rgba(167,139,250,0.4)", cursor: "pointer", position: "relative", overflow: "hidden" }}
+              >
+                {/* Pulsing glow ring hint */}
+                <motion.div
+                  animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ position: "absolute", inset: 0, borderRadius: 24, border: "2px solid rgba(167,139,250,0.5)", pointerEvents: "none" }}
+                />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--vx-text-muted)" }}>Platform Distribution</span>
-                  <PieChart size={16} style={{ color: "#a78bfa" }} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--vx-text-primary)" }}>Platform Distribution</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <motion.span
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      style={{ fontSize: 9, fontWeight: 800, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}
+                    >
+                      Tap to view
+                    </motion.span>
+                    <PieChart size={16} style={{ color: "#a78bfa" }} />
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 6, height: 6, borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ flex: 4, background: "#38bdf8" }} />
@@ -502,17 +526,13 @@ export default function AdPreviewPage() {
                   <div style={{ flex: 3, background: "#10b981" }} />
                 </div>
                 <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#38bdf8" }} /> Instagram
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa" }} /> Facebook
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> YouTube
-                  </div>
+                  {[{c:"#38bdf8",l:"Instagram",p:"40%"},{c:"#a78bfa",l:"Facebook",p:"30%"},{c:"#10b981",l:"YouTube",p:"30%"}].map(({c,l,p}) => (
+                    <div key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: c }} /> {l} <span style={{ color: c }}>{p}</span>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Launch Actions */}
@@ -541,6 +561,111 @@ export default function AdPreviewPage() {
           </p>
         </footer>
       </div>
+
+      {/* ── PIE CHART MODAL ── */}
+      <AnimatePresence>
+        {showPieChart && (() => {
+          const totalBudget = parseInt(campaignData.totalAmount.replace(/[^0-9]/g, "")) || 35000;
+          const pieData = [
+            { name: "Instagram", value: 40, color: "#38bdf8", icon: "📸", spend: Math.round(totalBudget * 0.40) },
+            { name: "Facebook",  value: 30, color: "#a78bfa", icon: "👍", spend: Math.round(totalBudget * 0.30) },
+            { name: "YouTube",   value: 30, color: "#10b981", icon: "▶️", spend: Math.round(totalBudget * 0.30) },
+          ];
+          return (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                key="backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowPieChart(false)}
+                style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", zIndex: 1000 }}
+              />
+              {/* Modal */}
+              <motion.div
+                key="modal"
+                initial={{ opacity: 0, scale: 0.85, x: "-50%", y: "-40%" }}
+                animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                exit={{ opacity: 0, scale: 0.85, x: "-50%", y: "-40%" }}
+                transition={{ type: "spring", damping: 22, stiffness: 280 }}
+                style={{
+                  position: "fixed", top: "50%", left: "50%",
+                  zIndex: 1001, width: "min(480px, 92vw)",
+                  background: "var(--vx-bg-card)", border: "1px solid rgba(167,139,250,0.3)",
+                  borderRadius: 28, padding: "32px", boxShadow: "0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(167,139,250,0.1)"
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                  <div>
+                    <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Platform Distribution</h3>
+                    <p style={{ fontSize: 12, color: "var(--vx-text-muted)", margin: "4px 0 0", fontWeight: 600 }}>
+                      Budget allocation across {pieData.length} platforms
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowPieChart(false)}
+                    style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--vx-text-muted)" }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Pie Chart */}
+                <div style={{ height: 220, position: "relative" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPie>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={95}
+                        paddingAngle={3}
+                        dataKey="value"
+                        animationBegin={0}
+                        animationDuration={900}
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} stroke="transparent"/>
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ background: "#0c0e1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 13 }}
+                        formatter={(value: number) => [`${value}%`, "Share"]}
+                      />
+                    </RechartsPie>
+                  </ResponsiveContainer>
+                  {/* Center label */}
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none" }}>
+                    <div style={{ fontSize: 11, color: "var(--vx-text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "var(--vx-text-primary)", marginTop: 2 }}>{campaignData.totalAmount}</div>
+                  </div>
+                </div>
+
+                {/* Legend rows */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+                  {pieData.map(p => (
+                    <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderRadius: 14, background: "var(--vx-bg-input)", border: `1px solid ${p.color}30` }}>
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: p.color, flexShrink: 0, boxShadow: `0 0 8px ${p.color}` }} />
+                      <span style={{ fontSize: 14, fontWeight: 700, flex: 1 }}>{p.icon} {p.name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: p.color }}>{p.value}%</span>
+                      <span style={{ fontSize: 12, color: "var(--vx-text-muted)", fontWeight: 600 }}>₹{p.spend.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer note */}
+                <p style={{ fontSize: 11, color: "var(--vx-text-muted)", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
+                  Budget is automatically distributed based on platform engagement rates and your audience settings.
+                </p>
+              </motion.div>
+            </>
+          );
+        })()}
+      </AnimatePresence>
+
     </motion.div>
   );
 }

@@ -173,9 +173,37 @@ export default function PaymentPage() {
   };
 
   const paymentMethods = [
-    { id: "upi", name: "UPI Pay", icon: Smartphone, desc: "GPay, PhonePe, UPI" },
-    { id: "card", name: "Card", icon: CreditCard, desc: "Credit or Debit" },
-    { id: "wallet", name: "Wallet", icon: Wallet, desc: "Paytm, etc.", soon: true },
+    { 
+      id: "upi", 
+      name: "UPI / Apps", 
+      icon: Smartphone, 
+      brands: [
+        { name: "GPay", src: "https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg", w: 32 },
+        { name: "PhonePe", src: "https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg", w: 20 },
+        { name: "Paytm", src: "https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg", w: 34 },
+        { name: "UPI", src: "https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg", w: 28 }
+      ]
+    },
+    { 
+      id: "card", 
+      name: "Credit / Debit", 
+      icon: CreditCard, 
+      brands: [
+        { name: "Visa", src: "https://cdn.simpleicons.org/visa/1A1F71", w: 28 },
+        { name: "Mastercard", src: "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg", w: 22 },
+        { name: "RuPay", src: "https://upload.wikimedia.org/wikipedia/commons/c/cb/Rupay-Logo.png", w: 32 }
+      ]
+    },
+    { 
+      id: "wallet", 
+      name: "Wallets", 
+      icon: Wallet, 
+      soon: true,
+      brands: [
+        { name: "Paytm", src: "https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg", w: 34 },
+        { name: "PayPal", src: "https://cdn.simpleicons.org/paypal/00457C", w: 22 }
+      ]
+    },
   ];
 
   return (
@@ -255,15 +283,34 @@ export default function PaymentPage() {
                     borderColor: selectedMethod === method.id ? "var(--vx-text-primary)" : "var(--vx-border)",
                     background: selectedMethod === method.id ? "rgba(255,255,255,0.05)" : "var(--vx-bg-input)",
                     textAlign: "left", cursor: method.soon ? "not-allowed" : "pointer", transition: "0.2s",
-                    opacity: method.soon ? 0.5 : 1
+                    opacity: method.soon ? 0.5 : 1,
+                    display: "flex", flexDirection: "column", justifyContent: "space-between"
                   }}
                 >
                   {method.soon && <span style={{ position: "absolute", top: 12, right: 12, fontSize: 8, fontWeight: 900, background: "var(--vx-border)", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>Soon</span>}
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--vx-bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: selectedMethod === method.id ? "var(--vx-text-primary)" : "var(--vx-text-muted)" }}>
-                    <method.icon size={20} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--vx-bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: selectedMethod === method.id ? "var(--vx-text-primary)" : "var(--vx-text-muted)" }}>
+                      <method.icon size={20} />
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)" }}>{method.name}</div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)" }}>{method.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--vx-text-muted)", marginTop: 2 }}>{method.desc}</div>
+                  
+                  {/* Brand Icons Row */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {method.brands.map(brand => (
+                      <div 
+                        key={brand.name} 
+                        title={brand.name}
+                        style={{ 
+                          display: "flex", alignItems: "center", justifyContent: "center", 
+                          width: 44, height: 26, background: "#fff", border: "1px solid var(--vx-border)", 
+                          borderRadius: 6, overflow: "hidden" 
+                        }}
+                      >
+                        <img src={brand.src} alt={brand.name} style={{ width: brand.w, objectFit: "contain" }} />
+                      </div>
+                    ))}
+                  </div>
                 </button>
               ))}
             </div>
