@@ -95,13 +95,15 @@ export default function AdPreviewPage() {
 
   const handleSaveDraft = () => {
     toast.success("Campaign Saved as Draft", {
-      description: "You can continue editing anytime from your dashboard."
+      description: "You can continue editing anytime from your dashboard.",
+      icon: <Save size={18} style={{ color: "#a78bfa" }} />
     });
   };
 
   const handleProceedToPayment = () => {
     toast.success("Proceeding to Payment", {
-      description: "Redirecting to secure payment gateway..."
+      description: "Redirecting to secure payment gateway...",
+      icon: <CreditCard size={18} style={{ color: "#38bdf8" }} />
     });
     navigate('/payment');
   };
