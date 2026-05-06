@@ -556,9 +556,6 @@ export function HeroSection() {
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <VulpinixLogo size="sm" />
-                  <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>Vulpinix AI Guide</h3>
-                  </div>
                 </div>
                 
                 <button

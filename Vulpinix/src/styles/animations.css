@@ -12,12 +12,20 @@ html { scroll-behavior: smooth; }
 #vx-scroll-progress {
   position: fixed;
   top: 0; left: 0;
-  height: 2px;
+  height: 3px;
   width: 0%;
-  background: var(--vx-text-primary);
+  background: linear-gradient(90deg, #a78bfa, #38bdf8, #a78bfa);
+  background-size: 200% auto;
   z-index: 9999;
   pointer-events: none;
-  transition: width 0.05s linear;
+  transition: width 0.08s linear;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+  animation: vx-shimmer-progress 2s linear infinite;
+}
+
+@keyframes vx-shimmer-progress {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
 }
 
 /* ── Custom cursor ────────────────────────────────────────────────────────── */
