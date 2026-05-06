@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import './UploadPage.css';
+import './SharedFlow.css';
 
 type Platform = "instagram-feed" | "instagram-story" | "facebook-feed" | "youtube";
 type Gender = "all" | "male" | "female" | "custom";
@@ -170,7 +170,7 @@ export default function AdPreviewPage() {
             </div>
             <div style={{textAlign:'center', color: '#fff', padding: '20px'}}>
               <div style={{fontSize:'40px', marginBottom:'12px'}}>✦</div>
-              <div style={{fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:'18px', marginBottom:'8px'}}>Story Ad</div>
+              <div style={{fontFamily:"'Inter', sans-serif", fontWeight:700, fontSize:'18px', marginBottom:'8px'}}>Story Ad</div>
               <div style={{fontSize:'13px', opacity:0.85}}>{adCreative.caption.substring(0, 80)}...</div>
             </div>
             <button className="ad-mock-cta-btn" style={{background:'rgba(255,255,255,0.9)', color:'#04060f', borderRadius:'25px'}}>{adCreative.cta}</button>
@@ -427,7 +427,7 @@ export default function AdPreviewPage() {
               <div key={row.label} style={{width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
                 <span style={{fontSize:'12px', color:'var(--muted)'}}>{row.label}</span>
                 <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Syne',sans-serif", fontWeight:600}}>{row.value}</span>
+                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Inter', sans-serif", fontWeight:600}}>{row.value}</span>
                   <button className="btn-ai btn-ai-no" style={{padding:'4px 10px', fontSize:'11px', flex:'none'}} onClick={() => navigate(row.nav)}>Edit</button>
                 </div>
               </div>
@@ -484,3 +484,4 @@ export default function AdPreviewPage() {
     </div>
   );
 }
+

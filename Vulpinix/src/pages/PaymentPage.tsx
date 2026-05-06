@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import PaymentSuccessModal from "../components/PaymentSuccessModal";
-import './UploadPage.css';
+import './SharedFlow.css';
 
 type PaymentMethod = "upi" | "card" | "wallet" | null;
 
@@ -294,7 +294,21 @@ export default function PaymentPage() {
         const response = await fetch("http://localhost:5000/api/campaign/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newCampaign),
+          body: JSON.stringify({
+            ...newCampaign,
+            campaignName: newCampaign.name,
+            // Strip base64 blobs — MongoDB has a 16MB document limit
+            // Keep a lightweight indicator so admin knows media was uploaded
+            adImage: savedAdImage ? "[media-uploaded-locally]" : "",
+            content: {
+              ...newCampaign.content,
+              mediaUrl: savedAdImage ? "[media-uploaded-locally]" : "",
+            },
+            creativeFiles: (newCampaign.creativeFiles || []).map((f: any) => ({
+              ...f,
+              url: f.url ? "[file-uploaded-locally]" : "",
+            })),
+          }),
         });
         const data = await response.json();
         if (data.token) {
@@ -417,7 +431,7 @@ export default function PaymentPage() {
               ].map(row => (
                 <div key={row.label} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
                   <span style={{fontSize:'12px', color:'var(--muted)'}}>{row.label}</span>
-                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Syne',sans-serif", fontWeight:600}}>{row.value}</span>
+                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Inter', sans-serif", fontWeight:600}}>{row.value}</span>
                 </div>
               ))}
             </div>
@@ -563,3 +577,4 @@ export default function PaymentPage() {
     </>
   );
 }
+

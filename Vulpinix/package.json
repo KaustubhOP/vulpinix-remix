@@ -42,6 +42,7 @@
             "react-day-picker": "^8.10.1",
             "react-dom": "^18.3.1",
             "react-hook-form": "^7.55.0",
+            "react-icons": "^5.6.0",
             "react-resizable-panels": "^2.1.7",
             "react-router": "*",
             "recharts": "^2.15.2",
@@ -54,7 +55,7 @@
             "@types/react": "^19.2.14",
             "@types/react-dom": "^19.2.3",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "vite": "6.3.5"
+            "vite": "^6.4.2"
       },
       "scripts": {
             "dev": "vite",

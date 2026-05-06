@@ -10,6 +10,7 @@ import {
   Shield, CreditCard, ReceiptText, Building2
 } from "lucide-react";
 import { toast } from "sonner";
+import { VulpinixLogo } from "../../components/VulpinixLogo";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    TYPES
@@ -44,6 +45,7 @@ interface Campaign {
   adCopyText?: string;
   callToAction?: string;
   content?: { mediaUrl?: string; caption?: string; hashtags?: string[] };
+  creativeFiles?: { url?: string; type?: string; filename?: string }[];
   paymentAmount?: string;
   paymentStatus?: string;
   paymentId?: string;
@@ -56,7 +58,7 @@ interface Campaign {
    CSS STYLES (injected — pure @keyframes, no JS library required)
 ───────────────────────────────────────────────────────────────────────────── */
 const ADMIN_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+  /* Inter loaded globally via index.html */
 
   @keyframes adNavSlide   { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
   @keyframes adFadeUpStat { from { opacity:0; transform:translateY(24px);  } to { opacity:1; transform:translateY(0); } }
@@ -79,7 +81,7 @@ const ADMIN_STYLES = `
   }
 
   /* root */
-  .vx-admin { font-family:'DM Sans',ui-sans-serif,sans-serif; background:#080b14; min-height:100vh; color:#e2e8f0; overflow-x:hidden; }
+  .vx-admin { font-family:'Inter', ui-sans-serif, sans-serif; background:#080b14; min-height:100vh; color:#e2e8f0; overflow-x:hidden; }
 
   /* grid bg */
   .vx-admin__grid {
@@ -122,7 +124,7 @@ const ADMIN_STYLES = `
     font-weight:900; font-size:15px; color:#fff; flex-shrink:0;
   }
   .vx-admin__logo-name {
-    font-family:'Syne',sans-serif; font-weight:800; font-size:17px;
+    font-family:'Inter', sans-serif; font-weight:800; font-size:17px;
     background:linear-gradient(90deg,#c4b5fd,#67e8f9); -webkit-background-clip:text;
     -webkit-text-fill-color:transparent; background-clip:text;
   }
@@ -160,7 +162,7 @@ const ADMIN_STYLES = `
 
   /* main */
   .vx-admin__main { position:relative; z-index:1; max-width:1280px; margin:0 auto; padding:36px 28px 80px; }
-  .vx-admin__title { font-family:'Syne',sans-serif; font-weight:800; font-size:32px; color:#fff; margin-bottom:4px; }
+  .vx-admin__title { font-family:'Inter', sans-serif; font-weight:800; font-size:32px; color:#fff; margin-bottom:4px; }
   .vx-admin__sub   { font-size:14px; color:rgba(180,180,220,.5); margin-bottom:32px; }
 
   /* search bar */
@@ -169,7 +171,7 @@ const ADMIN_STYLES = `
   .vx-admin__search {
     width:100%; padding:10px 14px 10px 40px;
     background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
-    border-radius:12px; font-family:'DM Sans',sans-serif; font-size:14px;
+    border-radius:12px; font-family:'Inter', sans-serif; font-size:14px;
     color:#e2e8f0; outline:none; transition:all .2s;
   }
   .vx-admin__search::placeholder { color:rgba(180,180,220,.3); }
@@ -186,7 +188,7 @@ const ADMIN_STYLES = `
   .vx-admin__stat-card:hover { transform:translateY(-2px); border-color:rgba(139,92,246,.3); box-shadow:0 8px 32px rgba(99,51,255,.1); }
   .vx-admin__stat-dot { width:8px; height:8px; border-radius:50%; margin-bottom:14px; }
   .vx-admin__stat-label { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(180,180,220,.5); margin-bottom:6px; }
-  .vx-admin__stat-num { font-family:'Syne',sans-serif; font-weight:800; font-size:38px; color:#fff; line-height:1; }
+  .vx-admin__stat-num { font-family:'Inter', sans-serif; font-weight:800; font-size:38px; color:#fff; line-height:1; }
 
   /* filter tabs */
   .vx-admin__filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
@@ -225,7 +227,7 @@ const ADMIN_STYLES = `
     background:linear-gradient(135deg,#6333ff55,#06d6c722);
     border:1px solid rgba(99,51,255,.3);
     display:flex; align-items:center; justify-content:center;
-    font-family:'Syne',sans-serif; font-weight:700; font-size:14px; color:#a78bfa;
+    font-family:'Inter', sans-serif; font-weight:700; font-size:14px; color:#a78bfa;
     flex-shrink:0;
   }
   .vx-admin__user-name { font-size:13px; font-weight:600; color:#e2e8f0; }
@@ -289,7 +291,7 @@ const ADMIN_STYLES = `
     padding:22px 24px 16px; display:flex; align-items:center; justify-content:space-between;
     border-bottom:1px solid rgba(255,255,255,.07);
   }
-  .vx-admin__modal-title { font-family:'Syne',sans-serif; font-weight:700; font-size:18px; color:#fff; }
+  .vx-admin__modal-title { font-family:'Inter', sans-serif; font-weight:700; font-size:18px; color:#fff; }
   .vx-admin__modal-close {
     width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center;
@@ -313,7 +315,7 @@ const ADMIN_STYLES = `
   .vx-admin__field { flex:1; min-width:180px; }
   .vx-admin__field-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(180,180,220,.4); margin-bottom:5px; }
   .vx-admin__field-val { font-size:14px; color:#e2e8f0; }
-  .vx-admin__section-title { font-family:'Syne',sans-serif; font-weight:600; font-size:13px; color:rgba(180,180,220,.7); letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,.07); }
+  .vx-admin__section-title { font-family:'Inter', sans-serif; font-weight:600; font-size:13px; color:rgba(180,180,220,.7); letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,.07); }
   .vx-admin__tag { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; background:rgba(99,51,255,.12); border:1px solid rgba(99,51,255,.25); font-size:11px; color:#a78bfa; margin:2px; }
   .vx-admin__receipt {
     background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.2);
@@ -350,7 +352,7 @@ const ADMIN_STYLES = `
   .vx-admin__modal-btn-reject:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
   .vx-admin__reject-inline { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
   .vx-admin__reject-textarea {
-    flex:1; min-width:200px; padding:10px 14px; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13px;
+    flex:1; min-width:200px; padding:10px 14px; border-radius:10px; font-family:'Inter', sans-serif; font-size:13px;
     background:rgba(255,255,255,.05); border:1px solid rgba(239,68,68,.3); color:#e2e8f0;
     resize:none; outline:none; height:48px;
     transition:border-color .2s;
@@ -377,14 +379,14 @@ const ADMIN_STYLES = `
     display:flex; align-items:center; justify-content:center;
     box-shadow:0 0 30px rgba(99,51,255,.4);
   }
-  .vx-admin__login-title { font-family:'Syne',sans-serif; font-weight:800; font-size:26px; color:#fff; text-align:center; margin-bottom:6px; }
+  .vx-admin__login-title { font-family:'Inter', sans-serif; font-weight:800; font-size:26px; color:#fff; text-align:center; margin-bottom:6px; }
   .vx-admin__login-sub { font-size:13px; color:rgba(180,180,220,.5); text-align:center; margin-bottom:28px; }
   .vx-admin__input-wrap { position:relative; margin-bottom:16px; }
   .vx-admin__input-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:rgba(180,180,220,.4); }
   .vx-admin__input {
     width:100%; padding:12px 14px 12px 42px;
     background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
-    border-radius:12px; font-family:'DM Sans',sans-serif; font-size:14px;
+    border-radius:12px; font-family:'Inter', sans-serif; font-size:14px;
     color:#e2e8f0; outline:none; transition:all .2s;
     box-sizing:border-box;
   }
@@ -509,7 +511,7 @@ function DetailModal({
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
                 <div className="vx-admin__avatar" style={{ width: 52, height: 52, fontSize: 18, borderRadius: 14 }}>{initials}</div>
                 <div>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 17, color: "#fff" }}>{campaign.userName || "Unknown"}</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: 17, color: "#fff" }}>{campaign.userName || "Unknown"}</div>
                   <div style={{ fontSize: 12, color: "rgba(180,180,220,.5)" }}>{campaign.userEmail || "—"}</div>
                 </div>
               </div>
@@ -612,33 +614,66 @@ function DetailModal({
             </div>
           )}
 
-          {tab === "Ad Creative" && (
-            <div>
-              <div className="vx-admin__section-title">Creative Preview</div>
-              <div className="vx-admin__ad-preview">
-                {campaign.adImage
-                  ? <img src={campaign.adImage} alt="Ad preview" />
-                  : <div className="vx-admin__ad-no-media">No media attached</div>
-                }
-              </div>
-              {campaign.adCaption && (
-                <>
-                  <div className="vx-admin__field-label" style={{ marginBottom: 6 }}>Ad Caption</div>
-                  <div className="vx-admin__caption-block">"{campaign.adCaption}"</div>
-                </>
-              )}
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Ad Description</div>
-                  <div className="vx-admin__field-val">{campaign.adContentDescription || campaign.adCopyText || "—"}</div>
+          {tab === "Ad Creative" && (() => {
+            const rawSrc = campaign.adImage || campaign.content?.mediaUrl || campaign.creativeFiles?.[0]?.url || "";
+            const isPlaceholder = rawSrc === "[media-uploaded-locally]" || rawSrc === "[file-uploaded-locally]";
+            const mediaSrc = isPlaceholder ? "" : rawSrc;
+            const hasMedia = !!rawSrc;
+            const isVideo = mediaSrc.startsWith("data:video") || !!mediaSrc.match(/\.(mp4|webm|ogg)$/i);
+            return (
+              <div>
+                <div className="vx-admin__section-title">Creative Preview</div>
+                <div className="vx-admin__ad-preview">
+                  {mediaSrc ? (
+                    isVideo
+                      ? <video src={mediaSrc} controls style={{ width: "100%", borderRadius: 8 }} />
+                      : <img src={mediaSrc} alt="Ad preview" style={{ width: "100%", borderRadius: 8, objectFit: "contain" }} />
+                  ) : hasMedia && isPlaceholder ? (
+                    <div className="vx-admin__ad-no-media">
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                      <div style={{ color: "#34d399", fontWeight: 700 }}>Media Uploaded</div>
+                      <div style={{ fontSize: 11, color: "rgba(180,180,220,.4)", marginTop: 4 }}>Stored on user's device — not transferred to server</div>
+                    </div>
+                  ) : (
+                    <div className="vx-admin__ad-no-media">
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🖼️</div>
+                      <div>No media attached</div>
+                      <div style={{ fontSize: 11, color: "rgba(180,180,220,.3)", marginTop: 4 }}>User did not upload a creative</div>
+                    </div>
+                  )}
                 </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Call To Action</div>
-                  <div className="vx-admin__field-val">{campaign.callToAction || "—"}</div>
+
+                {campaign.adCaption && (
+                  <>
+                    <div className="vx-admin__field-label" style={{ marginBottom: 6 }}>Ad Caption</div>
+                    <div className="vx-admin__caption-block">"{campaign.adCaption}"</div>
+                  </>
+                )}
+                <div className="vx-admin__field-row">
+                  <div className="vx-admin__field">
+                    <div className="vx-admin__field-label">Ad Description</div>
+                    <div className="vx-admin__field-val">{campaign.adContentDescription || campaign.adCopyText || "—"}</div>
+                  </div>
+                  <div className="vx-admin__field">
+                    <div className="vx-admin__field-label">Call To Action</div>
+                    <div className="vx-admin__field-val">{campaign.callToAction || "—"}</div>
+                  </div>
                 </div>
+                {campaign.creativeFiles && campaign.creativeFiles.length > 0 && (
+                  <>
+                    <div className="vx-admin__section-title" style={{ marginTop: 16 }}>Creative Files ({campaign.creativeFiles.length})</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {campaign.creativeFiles.map((f: any, i: number) => (
+                        <div key={i} style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(99,51,255,.12)", border: "1px solid rgba(99,51,255,.25)", fontSize: 12, color: "#a78bfa" }}>
+                          {f.filename || `File ${i + 1}`} ({f.type || "image"})
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {tab === "Payment Info" && (
             <div>
@@ -740,16 +775,32 @@ export default function AdminDashboard() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // ── Dashboard state ────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"campaigns" | "users">("campaigns");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filter, setFilter] = useState<CampaignStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
 
   // ── Load campaigns ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated) return;
     loadCampaigns();
+    loadUsers();
   }, [isAuthenticated]);
+
+  const loadUsers = async () => {
+    const token = sessionStorage.getItem("adminToken");
+    if (!token) return;
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.users)) setUsers(data.users);
+    } catch { /* offline */ }
+  };
 
   const loadCampaigns = async () => {
     // Try MongoDB first
@@ -881,10 +932,10 @@ export default function AdminDashboard() {
   });
 
   const stats = [
-    { label: "Total Submissions", value: campaigns.length, dotColor: "#94a3b8" },
-    { label: "Pending Review",    value: campaigns.filter(c => c.status === "pending").length, dotColor: "#fbbf24" },
-    { label: "Approved",          value: campaigns.filter(c => c.status === "approved").length, dotColor: "#34d399" },
-    { label: "Rejected",          value: campaigns.filter(c => c.status === "rejected").length, dotColor: "#f87171" },
+    { label: "Total Users",       value: users.length,                                                   dotColor: "#818cf8" },
+    { label: "Total Submissions", value: campaigns.length,                                               dotColor: "#94a3b8" },
+    { label: "Pending Review",    value: campaigns.filter(c => c.status === "pending").length,            dotColor: "#fbbf24" },
+    { label: "Approved",          value: campaigns.filter(c => c.status === "approved").length,           dotColor: "#34d399" },
   ];
 
   const pendingCount = campaigns.filter(c => c.status === "pending").length;
@@ -940,9 +991,8 @@ export default function AdminDashboard() {
         {/* Navbar */}
         <nav className="vx-admin__nav">
           <div className="vx-admin__nav-inner">
-            <div className="vx-admin__logo">
-              <span className="vx-admin__logo-icon">V</span>
-              <span className="vx-admin__logo-name">Vulpinix AI</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <VulpinixLogo size="sm" onClick={() => navigate("/")} />
               <span className="vx-admin__badge"><span className="vx-admin__badge-dot" />Admin Panel</span>
             </div>
             <div className="vx-admin__nav-right">
@@ -961,101 +1011,178 @@ export default function AdminDashboard() {
 
         {/* Main */}
         <div className="vx-admin__main">
-          <h1 className="vx-admin__title">Campaign Queue</h1>
-          <p className="vx-admin__sub">Review user submissions and manage campaign approvals.</p>
+
+          {/* Page tab switcher */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
+            {(["campaigns", "users"] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                style={{
+                  padding: "9px 22px", borderRadius: 999, fontWeight: 700, fontSize: 13,
+                  border: activeTab === t ? "none" : "1px solid rgba(255,255,255,.1)",
+                  background: activeTab === t ? "linear-gradient(135deg,#6333ff,#06d6c7)" : "rgba(255,255,255,.03)",
+                  color: activeTab === t ? "#fff" : "rgba(180,180,220,.6)",
+                  cursor: "pointer", transition: "all .2s",
+                  boxShadow: activeTab === t ? "0 0 16px rgba(99,51,255,.35)" : "none",
+                  textTransform: "capitalize",
+                }}
+              >
+                {t === "campaigns" ? `📋 Campaigns (${campaigns.length})` : `👥 Users (${users.length})`}
+              </button>
+            ))}
+          </div>
+
+          <h1 className="vx-admin__title">{activeTab === "campaigns" ? "Campaign Queue" : "Registered Users"}</h1>
+          <p className="vx-admin__sub">{activeTab === "campaigns" ? "Review user submissions and manage campaign approvals." : "All users who have signed up on Vulpinix AI."}</p>
 
           {/* Stats */}
           <div className="vx-admin__stats">
             {stats.map((s, i) => <StatCard key={s.label} label={s.label} value={s.value} dotColor={s.dotColor} delay={i * 0.08} />)}
           </div>
 
-          {/* Search */}
-          <div className="vx-admin__search-wrap">
-            <Search size={15} className="vx-admin__search-icon" />
-            <input className="vx-admin__search" placeholder="Search by name, business, email…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-          </div>
-
-          {/* Filter tabs */}
-          <div className="vx-admin__filters">
-            {(["all", "pending", "in_review", "approved", "rejected"] as const).map(f => (
-              <button key={f} className={`vx-admin__filter-btn${filter === f ? " vx-admin__filter-btn--active" : ""}`} onClick={() => setFilter(f)}>
-                {f.replace("_", " ")}
-              </button>
-            ))}
-          </div>
-
-          {/* Table */}
-          <div className="vx-admin__table-wrap">
-            {filtered.length === 0 ? (
-              <div className="vx-admin__empty">
-                <div className="vx-admin__empty-icon"><ShieldAlert size={28} /></div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(180,180,220,.7)", marginBottom: 6 }}>No campaigns found</div>
-                <div style={{ fontSize: 13, color: "rgba(180,180,220,.4)" }}>Waiting for users to submit new content.</div>
+          {/* CAMPAIGNS VIEW */}
+          {activeTab === "campaigns" && (
+            <>
+              {/* Search */}
+              <div className="vx-admin__search-wrap">
+                <Search size={15} className="vx-admin__search-icon" />
+                <input className="vx-admin__search" placeholder="Search by name, business, email…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
-            ) : (
-              <table className="vx-admin__table">
-                <thead className="vx-admin__thead">
-                  <tr>
-                    {["", "User", "Business", "Platform", "Budget", "Submitted", "Status", "Actions"].map(h => (
-                      <th key={h} className="vx-admin__th">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((c, idx) => {
-                    const sc = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
-                    const initials = (c.userName || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-                    return (
-                      <tr key={c.id} className="vx-admin__tr" style={{ animationDelay: `${idx * 0.04}s` }}>
-                        <td className="vx-admin__td">
-                          <div className="vx-admin__avatar">{initials}</div>
-                        </td>
-                        <td className="vx-admin__td">
-                          <div className="vx-admin__user-name">{c.userName || "—"}</div>
-                          <div className="vx-admin__user-email">{c.userEmail || "—"}</div>
-                        </td>
-                        <td className="vx-admin__td vx-admin__td-muted">{c.businessName}</td>
-                        <td className="vx-admin__td">
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                            {(c.platforms || []).slice(0, 2).map(p => (
-                              <span key={p} className="vx-admin__platform-pill"><PlatformIcon p={p} /></span>
-                            ))}
-                            {(c.platforms || []).length > 2 && <span className="vx-admin__platform-pill">+{c.platforms.length - 2}</span>}
-                          </div>
-                        </td>
-                        <td className="vx-admin__td vx-admin__td-muted">{c.budget}</td>
-                        <td className="vx-admin__td vx-admin__td-muted" style={{ whiteSpace: "nowrap" }}>
-                          {new Date(c.dateSubmitted).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}
-                        </td>
-                        <td className="vx-admin__td">
-                          <span className={`vx-admin__status ${sc.cls}`}>
-                            <span className="vx-admin__status-dot" style={{ background: sc.dotColor }} />
-                            {sc.label}
-                          </span>
-                        </td>
-                        <td className="vx-admin__td">
-                          <div className="vx-admin__actions">
-                            <button className="vx-admin__btn vx-admin__btn--view" onClick={() => setSelectedCampaign(c)}>
-                              <Eye size={11} /> View
-                            </button>
-                            <button className="vx-admin__btn vx-admin__btn--approve" disabled={c.status === "approved"} onClick={() => updateStatus(c.id, "approved")}>
-                              <CheckCircle2 size={11} /> Approve
-                            </button>
-                            <button className="vx-admin__btn vx-admin__btn--reject" disabled={c.status === "rejected"} onClick={() => {
-                              const reason = prompt("Rejection reason:");
-                              if (reason) updateStatus(c.id, "rejected", reason);
-                            }}>
-                              <XCircle size={11} /> Reject
-                            </button>
-                          </div>
-                        </td>
+              {/* Filter tabs */}
+              <div className="vx-admin__filters">
+                {(["all", "pending", "in_review", "approved", "rejected"] as const).map(f => (
+                  <button key={f} className={`vx-admin__filter-btn${filter === f ? " vx-admin__filter-btn--active" : ""}`} onClick={() => setFilter(f)}>
+                    {f.replace("_", " ")}
+                  </button>
+                ))}
+              </div>
+              {/* Table */}
+              <div className="vx-admin__table-wrap">
+                {filtered.length === 0 ? (
+                  <div className="vx-admin__empty">
+                    <div className="vx-admin__empty-icon"><ShieldAlert size={28} /></div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(180,180,220,.7)", marginBottom: 6 }}>No campaigns found</div>
+                    <div style={{ fontSize: 13, color: "rgba(180,180,220,.4)" }}>Waiting for users to submit new content.</div>
+                  </div>
+                ) : (
+                  <table className="vx-admin__table">
+                    <thead className="vx-admin__thead">
+                      <tr>
+                        {["", "User", "Business", "Platform", "Budget", "Submitted", "Status", "Actions"].map(h => (
+                          <th key={h} className="vx-admin__th">{h}</th>
+                        ))}
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                    </thead>
+                    <tbody>
+                      {filtered.map((c, idx) => {
+                        const sc = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
+                        const initials = (c.userName || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                        return (
+                          <tr key={c.id} className="vx-admin__tr" style={{ animationDelay: `${idx * 0.04}s` }}>
+                            <td className="vx-admin__td"><div className="vx-admin__avatar">{initials}</div></td>
+                            <td className="vx-admin__td">
+                              <div className="vx-admin__user-name">{c.userName || "—"}</div>
+                              <div className="vx-admin__user-email">{c.userEmail || "—"}</div>
+                            </td>
+                            <td className="vx-admin__td vx-admin__td-muted">{c.businessName}</td>
+                            <td className="vx-admin__td">
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                {(c.platforms || []).slice(0, 2).map(p => (
+                                  <span key={p} className="vx-admin__platform-pill"><PlatformIcon p={p} /></span>
+                                ))}
+                                {(c.platforms || []).length > 2 && <span className="vx-admin__platform-pill">+{c.platforms.length - 2}</span>}
+                              </div>
+                            </td>
+                            <td className="vx-admin__td vx-admin__td-muted">{c.budget}</td>
+                            <td className="vx-admin__td vx-admin__td-muted" style={{ whiteSpace: "nowrap" }}>
+                              {new Date(c.dateSubmitted).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}
+                            </td>
+                            <td className="vx-admin__td">
+                              <span className={`vx-admin__status ${sc.cls}`}>
+                                <span className="vx-admin__status-dot" style={{ background: sc.dotColor }} />
+                                {sc.label}
+                              </span>
+                            </td>
+                            <td className="vx-admin__td">
+                              <div className="vx-admin__actions">
+                                <button className="vx-admin__btn vx-admin__btn--view" onClick={() => setSelectedCampaign(c)}><Eye size={11} /> View</button>
+                                <button className="vx-admin__btn vx-admin__btn--approve" disabled={c.status === "approved"} onClick={() => updateStatus(c.id, "approved")}><CheckCircle2 size={11} /> Approve</button>
+                                <button className="vx-admin__btn vx-admin__btn--reject" disabled={c.status === "rejected"} onClick={() => { const reason = prompt("Rejection reason:"); if (reason) updateStatus(c.id, "rejected", reason); }}><XCircle size={11} /> Reject</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* USERS VIEW */}
+          {activeTab === "users" && (
+            <>
+              <div className="vx-admin__search-wrap">
+                <Search size={15} className="vx-admin__search-icon" />
+                <input className="vx-admin__search" placeholder="Search by name or email…" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+              </div>
+              <div className="vx-admin__table-wrap">
+                {users.length === 0 ? (
+                  <div className="vx-admin__empty">
+                    <div className="vx-admin__empty-icon"><Users size={28} /></div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(180,180,220,.7)", marginBottom: 6 }}>No users yet</div>
+                    <div style={{ fontSize: 13, color: "rgba(180,180,220,.4)" }}>Users will appear here once they sign up.</div>
+                  </div>
+                ) : (
+                  <table className="vx-admin__table">
+                    <thead className="vx-admin__thead">
+                      <tr>
+                        {["", "Name", "Email", "Auth", "Phone", "Company", "Joined"].map(h => (
+                          <th key={h} className="vx-admin__th">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users
+                        .filter(u => {
+                          const q = userSearch.toLowerCase();
+                          return !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+                        })
+                        .map((u, idx) => {
+                          const initials = (u.name || "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+                          return (
+                            <tr key={u.id} className="vx-admin__tr" style={{ animationDelay: `${idx * 0.04}s` }}>
+                              <td className="vx-admin__td"><div className="vx-admin__avatar">{initials}</div></td>
+                              <td className="vx-admin__td">
+                                <div className="vx-admin__user-name">{u.name}</div>
+                                <div className="vx-admin__user-email" style={{ color: u.role === "admin" ? "#a78bfa" : undefined }}>{u.role}</div>
+                              </td>
+                              <td className="vx-admin__td vx-admin__td-muted">{u.email}</td>
+                              <td className="vx-admin__td">
+                                <span className="vx-admin__platform-pill" style={{
+                                  background: u.authProvider === "google" ? "rgba(234,88,12,.12)" : "rgba(99,51,255,.12)",
+                                  borderColor: u.authProvider === "google" ? "rgba(234,88,12,.3)" : "rgba(99,51,255,.3)",
+                                  color: u.authProvider === "google" ? "#fb923c" : "#a78bfa",
+                                }}>
+                                  {u.authProvider === "google" ? "🔵 Google" : "📧 Email"}
+                                </span>
+                              </td>
+                              <td className="vx-admin__td vx-admin__td-muted">{u.phone || "—"}</td>
+                              <td className="vx-admin__td vx-admin__td-muted">{u.company || "—"}</td>
+                              <td className="vx-admin__td vx-admin__td-muted" style={{ whiteSpace: "nowrap" }}>
+                                {u.joinedAt ? new Date(u.joinedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Detail Modal */}
@@ -1075,3 +1202,5 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+

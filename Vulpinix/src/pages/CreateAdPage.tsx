@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import './UploadPage.css';
+import './SharedFlow.css';
 
 interface AudienceOption {
   id: string;
@@ -223,7 +223,7 @@ export default function CreateAdPage() {
             </div>
 
             <div style={{textAlign:'center', marginBottom:'32px'}}>
-              <div style={{fontFamily:"'Syne', sans-serif", fontSize:'42px', fontWeight:700, color:'#fff', marginBottom:'4px'}}>{currency}{budget.toLocaleString()}</div>
+              <div style={{fontFamily:"'Inter', sans-serif", fontSize:'42px', fontWeight:700, color:'#fff', marginBottom:'4px'}}>{currency}{budget.toLocaleString()}</div>
               <div style={{fontSize:'12px', color:'var(--muted)'}}>{budgetType === "daily" ? "per day" : "total campaign budget"}</div>
             </div>
 
@@ -410,3 +410,4 @@ export default function CreateAdPage() {
     </div>
   );
 }
+

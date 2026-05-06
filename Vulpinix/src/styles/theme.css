@@ -1,75 +1,82 @@
 /* ── VULPINIX THEME VARIABLES ── */
 /* Uses --vx- prefix to avoid collisions with Tailwind's --border, --ring tokens */
 
+/* ── GLOBAL FONT ── */
+html, body, button, input, select, textarea {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* ── DARK MODE (default) ── */
 :root,
 [data-theme="dark"] {
-  --vx-bg-primary:    #080b14;
-  --vx-bg-secondary:  #0d1022;
-  --vx-bg-card:       rgba(255,255,255,0.03);
-  --vx-bg-card-hover: rgba(255,255,255,0.06);
-  --vx-bg-input:      rgba(255,255,255,0.05);
-  --vx-bg-nav:        rgba(8,11,20,0.85);
+  --vx-bg-primary:    #030509;
+  --vx-bg-secondary:  #0a0c12;
+  --vx-bg-card:       rgba(255,255,255,0.02);
+  --vx-bg-card-hover: rgba(255,255,255,0.05);
+  --vx-bg-input:      rgba(255,255,255,0.03);
+  --vx-bg-nav:        rgba(3,5,9,0.85);
 
-  --vx-border:        rgba(255,255,255,0.08);
-  --vx-border-hover:  rgba(139,92,246,0.4);
-  --vx-border-focus:  rgba(99,51,255,0.6);
+  --vx-border:        rgba(255,255,255,0.06);
+  --vx-border-hover:  rgba(255,255,255,0.15);
+  --vx-border-focus:  rgba(255,255,255,0.3);
 
   --vx-text-primary:   #ffffff;
-  --vx-text-secondary: rgba(220,220,255,0.85);
-  --vx-text-muted:     rgba(160,160,210,0.5);
-  --vx-text-placeholder: rgba(160,160,210,0.35);
+  --vx-text-secondary: rgba(255,255,255,0.8);
+  --vx-text-muted:     rgba(255,255,255,0.4);
+  --vx-text-placeholder: rgba(255,255,255,0.2);
 
-  --vx-purple:      #6333ff;
-  --vx-purple-glow: rgba(99,51,255,0.25);
-  --vx-teal:        #06d6c7;
-  --vx-teal-glow:   rgba(6,214,199,0.2);
-  --vx-pink:        #ff2d78;
+  --vx-purple:      #ffffff;
+  --vx-purple-glow: transparent;
+  --vx-teal:        #e5e7eb;
+  --vx-teal-glow:   transparent;
+  --vx-pink:        #9ca3af;
 
-  --vx-gradient-primary: linear-gradient(135deg, #6333ff, #06d6c7);
-  --vx-gradient-hero:    linear-gradient(135deg, #a78bfa, #06d6c7, #ff2d78);
+  --vx-gradient-primary: #ffffff;
+  --vx-gradient-hero:    #ffffff;
 
-  --vx-shadow-card: 0 8px 40px rgba(0,0,0,0.4);
-  --vx-shadow-glow: 0 0 40px rgba(99,51,255,0.2);
+  --vx-shadow-card: 0 10px 40px rgba(0,0,0,0.5);
+  --vx-shadow-glow: none;
 
-  --vx-orb-1:       rgba(99,51,255,0.18);
-  --vx-orb-2:       rgba(6,214,199,0.12);
-  --vx-grid-line:   rgba(99,51,255,0.04);
+  --vx-orb-1:       transparent;
+  --vx-orb-2:       transparent;
+  --vx-grid-line:   rgba(255,255,255,0.02);
 }
 
 /* ── LIGHT MODE ── */
 [data-theme="light"] {
-  --vx-bg-primary:    #f0f2ff;
-  --vx-bg-secondary:  #e8ebff;
-  --vx-bg-card:       rgba(255,255,255,0.85);
-  --vx-bg-card-hover: rgba(255,255,255,0.95);
-  --vx-bg-input:      rgba(255,255,255,0.9);
-  --vx-bg-nav:        rgba(240,242,255,0.92);
+  --vx-bg-primary:    #ffffff;
+  --vx-bg-secondary:  #f9fafb;
+  --vx-bg-card:       #ffffff;
+  --vx-bg-card-hover: #f3f4f6;
+  --vx-bg-input:      #ffffff;
+  --vx-bg-nav:        rgba(255,255,255,0.95);
 
-  --vx-border:        rgba(99,51,255,0.15);
-  --vx-border-hover:  rgba(99,51,255,0.4);
-  --vx-border-focus:  rgba(99,51,255,0.6);
+  --vx-border:        rgba(0,0,0,0.08);
+  --vx-border-hover:  rgba(0,0,0,0.2);
+  --vx-border-focus:  rgba(0,0,0,0.4);
 
-  --vx-text-primary:   #0d0f1e;
-  --vx-text-secondary: #1e2140;
+  --vx-text-primary:   #000000;
+  --vx-text-secondary: #374151;
   --vx-text-muted:     #6b7280;
   --vx-text-placeholder: #9ca3af;
 
-  --vx-purple:      #5b21b6;
-  --vx-purple-glow: rgba(91,33,182,0.15);
-  --vx-teal:        #0694a2;
-  --vx-teal-glow:   rgba(6,148,162,0.15);
-  --vx-pink:        #e11d48;
+  --vx-purple:      #000000;
+  --vx-purple-glow: transparent;
+  --vx-teal:        #374151;
+  --vx-teal-glow:   transparent;
+  --vx-pink:        #6b7280;
 
-  --vx-gradient-primary: linear-gradient(135deg, #5b21b6, #0694a2);
-  --vx-gradient-hero:    linear-gradient(135deg, #5b21b6, #0694a2, #e11d48);
+  --vx-gradient-primary: #000000;
+  --vx-gradient-hero:    #000000;
 
-  --vx-shadow-card: 0 8px 40px rgba(99,51,255,0.12);
-  --vx-shadow-glow: 0 0 40px rgba(99,51,255,0.15);
+  --vx-shadow-card: 0 8px 30px rgba(0,0,0,0.05);
+  --vx-shadow-glow: none;
 
-  --vx-orb-1:       rgba(99,51,255,0.1);
-  --vx-orb-2:       rgba(6,148,162,0.08);
-  --vx-grid-line:   rgba(99,51,255,0.06);
+  --vx-orb-1:       transparent;
+  --vx-orb-2:       transparent;
+  --vx-grid-line:   rgba(0,0,0,0.03);
 }
 
 /* ── SMOOTH TRANSITIONS ── */

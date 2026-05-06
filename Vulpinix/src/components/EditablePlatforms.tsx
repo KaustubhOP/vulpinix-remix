@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Target, Edit2, Check } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
-import { toast } from "sonner@2.0.3";
-import { Instagram, Facebook, Youtube, Linkedin, Twitter } from "lucide-react";
+import { toast } from "sonner";
+import { SiInstagram, SiFacebook, SiYoutube, SiX } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa";
 
 interface Platform {
   id: string;
@@ -26,31 +27,31 @@ export function EditablePlatforms({
     {
       id: "instagram",
       name: "Instagram",
-      icon: Instagram,
+      icon: SiInstagram,
       selected: selectedPlatforms.includes("Instagram"),
     },
     {
       id: "facebook",
       name: "Facebook",
-      icon: Facebook,
+      icon: SiFacebook,
       selected: selectedPlatforms.includes("Facebook"),
     },
     {
       id: "youtube",
       name: "YouTube",
-      icon: Youtube,
+      icon: SiYoutube,
       selected: selectedPlatforms.includes("YouTube"),
     },
     {
       id: "linkedin",
       name: "LinkedIn",
-      icon: Linkedin,
+      icon: FaLinkedin,
       selected: selectedPlatforms.includes("LinkedIn"),
     },
     {
       id: "twitter",
       name: "Twitter",
-      icon: Twitter,
+      icon: SiX,
       selected: selectedPlatforms.includes("Twitter"),
     },
   ]);
