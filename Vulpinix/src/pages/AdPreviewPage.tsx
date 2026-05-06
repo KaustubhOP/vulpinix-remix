@@ -1,57 +1,51 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  ArrowLeft, 
+  Smartphone, 
+  Monitor, 
+  Tablet, 
+  TrendingUp, 
+  Target, 
+  CreditCard, 
+  Save, 
+  Instagram, 
+  Facebook, 
+  Youtube, 
+  Globe,
+  Zap,
+  ChevronRight,
+  Eye,
+  MousePointer2,
+  PieChart,
+  BarChart3,
+  Sparkles,
+  DollarSign,
+  Users,
+  ChevronDown,
+  Check
+} from "lucide-react";
 import { toast } from "sonner";
-import './SharedFlow.css';
+import { VulpinixLogo } from "../components/VulpinixLogo";
 
 type Platform = "instagram-feed" | "instagram-story" | "facebook-feed" | "youtube";
-type Gender = "all" | "male" | "female" | "custom";
-
-interface DeviceOption {
-  id: string;
-  name: string;
-  icon: string;
-  selected: boolean;
-}
-
-interface InterestOption {
-  id: string;
-  name: string;
-  icon: string;
-  selected: boolean;
-}
 
 export default function AdPreviewPage() {
   const navigate = useNavigate();
 
   // Platform Selection
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("instagram-feed");
+  const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
+  const platformDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load preview image from localStorage
+  // Load Data from localStorage
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  useEffect(() => {
-    const savedImage = localStorage.getItem("adPreviewImage");
-    if (savedImage) setPreviewImage(savedImage);
-  }, []);
-
-  // Load Ad Creative Data from localStorage
   const [adCreative, setAdCreative] = useState({
     caption: "Discover the future of digital marketing with AI-powered automation. Transform your content strategy today! 🚀",
-    hashtags: ["#DigitalMarketing", "#AIAutomation", "#VulpinixAI", "#MarketingTech"],
+    hashtags: ["#DigitalMarketing", "#AIAutomation", "#VulpinixAI"],
     cta: "Learn More"
   });
-  useEffect(() => {
-    const savedCreative = localStorage.getItem("adCreativeData");
-    if (savedCreative) {
-      const data = JSON.parse(savedCreative);
-      setAdCreative(prev => ({
-        caption: data.caption || prev.caption,
-        hashtags: data.hashtags || prev.hashtags,
-        cta: "Learn More"
-      }));
-    }
-  }, []);
-
-  // Load Campaign Data
   const [campaignData, setCampaignData] = useState({
     name: "Summer Sale Campaign",
     objective: "Brand Awareness",
@@ -64,44 +58,40 @@ export default function AdPreviewPage() {
     audience: ["Business", "Tech"],
     languages: ["English", "Hindi"]
   });
+
   useEffect(() => {
-    const savedCampaign = localStorage.getItem("campaignData");
-    if (savedCampaign) setCampaignData(JSON.parse(savedCampaign));
+    const handleClickOutside = (event: MouseEvent) => {
+      if (platformDropdownRef.current && !platformDropdownRef.current.contains(event.target as Node)) {
+        setIsPlatformDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Advanced Targeting
-  const [ageMin, setAgeMin] = useState(18);
-  const [ageMax, setAgeMax] = useState(45);
-  const [gender, setGender] = useState<Gender>("all");
+  useEffect(() => {
+    const savedImage = localStorage.getItem("adPreviewImage");
+    if (savedImage) setPreviewImage(savedImage);
 
-  const [interests, setInterests] = useState<InterestOption[]>([
-    { id: "gaming", name: "Gaming", icon: "🎮", selected: false },
-    { id: "travel", name: "Travel", icon: "✈️", selected: true },
-    { id: "startups", name: "Startups", icon: "🚀", selected: true },
-    { id: "technology", name: "Technology", icon: "💻", selected: true },
-    { id: "shopping", name: "Shopping", icon: "🛍️", selected: false },
-    { id: "fitness", name: "Fitness", icon: "🏋️", selected: false },
-  ]);
+    const savedCreative = localStorage.getItem("adCreativeData");
+    if (savedCreative) {
+      try {
+        const data = JSON.parse(savedCreative);
+        setAdCreative({
+          caption: data.caption || adCreative.caption,
+          hashtags: data.hashtags || adCreative.hashtags,
+          cta: "Learn More"
+        });
+      } catch {}
+    }
 
-  const [devices, setDevices] = useState<DeviceOption[]>([
-    { id: "mobile", name: "Mobile", icon: "📱", selected: true },
-    { id: "desktop", name: "Desktop", icon: "🖥️", selected: true },
-    { id: "tablet", name: "Tablet", icon: "⬛", selected: false },
-  ]);
-
-  const toggleInterest = (id: string) =>
-    setInterests(interests.map(i => i.id === id ? { ...i, selected: !i.selected } : i));
-
-  const toggleDevice = (id: string) =>
-    setDevices(devices.map(d => d.id === id ? { ...d, selected: !d.selected } : d));
-
-  // AI Predictions
-  const aiPredictions = {
-    estimatedReach: "125K – 180K",
-    clickThroughRate: "3.2% – 4.8%",
-    costPerClick: "₹12 – ₹18",
-    performanceScore: 92
-  };
+    const savedCampaign = localStorage.getItem("campaignData");
+    if (savedCampaign) {
+      try {
+        setCampaignData(JSON.parse(savedCampaign));
+      } catch {}
+    }
+  }, []);
 
   const handleSaveDraft = () => {
     toast.success("Campaign Saved as Draft", {
@@ -116,372 +106,263 @@ export default function AdPreviewPage() {
     navigate('/payment');
   };
 
-  // Scroll progress bar
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollBar = document.getElementById('scrollBarAP');
-      if (scrollBar) {
-        const s = document.documentElement;
-        if (s.scrollHeight - s.clientHeight > 0) {
-          const p = (s.scrollTop / (s.scrollHeight - s.clientHeight)) * 100;
-          scrollBar.style.width = p + '%';
-        }
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const platforms = [
+    { id: "instagram-feed", label: "Instagram Feed", icon: Instagram, color: "#e1306c" },
+    { id: "instagram-story", label: "Instagram Story", icon: Smartphone, color: "#833ab4" },
+    { id: "facebook-feed", label: "Facebook Feed", icon: Facebook, color: "#1877f2" },
+    { id: "youtube", label: "YouTube Ad", icon: Youtube, color: "#ff0000" },
+  ];
+
+  const currentPlatform = platforms.find(p => p.id === selectedPlatform) || platforms[0];
 
   const renderAdPreview = () => {
-    const imgSrc = previewImage;
+    const commonStyle = { 
+      background: "var(--vx-bg-card)", 
+      border: "1px solid var(--vx-border)", 
+      borderRadius: 24, 
+      width: "100%", 
+      maxWidth: 360, 
+      overflow: "hidden", 
+      boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
+    };
 
     if (selectedPlatform === "instagram-feed") return (
-      <div className="ad-mock-frame">
-        <div className="ad-mock-header">
-          <div className="ad-mock-avatar"></div>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={commonStyle}>
+        <div style={{ padding: 12, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)", border: "2px solid var(--vx-bg-card)" }} />
           <div>
-            <div className="ad-mock-name">vulpinix.ai</div>
-            <div className="ad-mock-sponsored">Sponsored</div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>vulpinix.ai</div>
+            <div style={{ fontSize: 11, color: "var(--vx-text-muted)" }}>Sponsored</div>
           </div>
         </div>
-        <div className="ad-mock-image">
-          {imgSrc
-            ? <img src={imgSrc} alt="Ad Preview" style={{width:'100%',height:'100%',objectFit:'cover'}} />
-            : <div className="ad-mock-placeholder"><span style={{fontSize:'40px'}}>✦</span><span>Your Ad Image</span></div>
-          }
+        <div style={{ aspectRatio: "1/1", background: "var(--vx-bg-input)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {previewImage ? (
+            <img src={previewImage} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Ad" />
+          ) : (
+            <div style={{ textAlign: "center", color: "var(--vx-text-muted)" }}>
+              <Zap size={32} style={{ marginBottom: 10, opacity: 0.3 }} />
+              <div style={{ fontSize: 12 }}>Visual Preview Ready</div>
+            </div>
+          )}
         </div>
-        <div className="ad-mock-body">
-          <div className="ad-mock-actions">❤ &nbsp; 💬 &nbsp; ✈</div>
-          <p className="ad-mock-caption"><strong>vulpinix.ai</strong> {adCreative.caption}</p>
-          <p className="ad-mock-hashtags">{adCreative.hashtags.join(" ")}</p>
+        <div style={{ padding: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 16 }}>
+              <span style={{ cursor: "pointer" }}>❤️</span>
+              <span style={{ cursor: "pointer" }}>💬</span>
+              <span style={{ cursor: "pointer" }}>✈️</span>
+            </div>
+            <span style={{ cursor: "pointer" }}>🔖</span>
+          </div>
+          <p style={{ fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+            <span style={{ fontWeight: 700, marginRight: 6 }}>vulpinix.ai</span>
+            {adCreative.caption.substring(0, 120)}...
+          </p>
+          <p style={{ fontSize: 12, color: "#38bdf8", marginTop: 8 }}>{adCreative.hashtags.join(" ")}</p>
         </div>
-        <div className="ad-mock-cta"><button className="ad-mock-cta-btn">{adCreative.cta}</button></div>
-      </div>
+        <button style={{ width: "100%", padding: "14px", background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+          {adCreative.cta}
+        </button>
+      </motion.div>
     );
 
-    if (selectedPlatform === "instagram-story") return (
-      <div className="ad-mock-frame ad-mock-story">
-        <div className="ad-mock-story-bg">
-          {imgSrc && <img src={imgSrc} alt="Story" style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}} />}
-          <div className="ad-mock-story-overlay">
-            <div className="ad-mock-header" style={{color:'#fff'}}>
-              <div className="ad-mock-avatar"></div>
-              <span className="ad-mock-name">vulpinix.ai</span>
-            </div>
-            <div style={{textAlign:'center', color: '#fff', padding: '20px'}}>
-              <div style={{fontSize:'40px', marginBottom:'12px'}}>✦</div>
-              <div style={{fontFamily:"'Inter', sans-serif", fontWeight:700, fontSize:'18px', marginBottom:'8px'}}>Story Ad</div>
-              <div style={{fontSize:'13px', opacity:0.85}}>{adCreative.caption.substring(0, 80)}...</div>
-            </div>
-            <button className="ad-mock-cta-btn" style={{background:'rgba(255,255,255,0.9)', color:'#04060f', borderRadius:'25px'}}>{adCreative.cta}</button>
-          </div>
-        </div>
-      </div>
-    );
-
-    if (selectedPlatform === "facebook-feed") return (
-      <div className="ad-mock-frame">
-        <div className="ad-mock-header">
-          <div className="ad-mock-avatar"></div>
-          <div>
-            <div className="ad-mock-name">Vulpinix AI</div>
-            <div className="ad-mock-sponsored">Sponsored · 🌍</div>
-          </div>
-        </div>
-        <div className="ad-mock-body" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <p className="ad-mock-caption">{adCreative.caption}</p>
-          <p className="ad-mock-hashtags">{adCreative.hashtags.join(" ")}</p>
-        </div>
-        <div className="ad-mock-image" style={{aspectRatio:'16/9', height:'auto'}}>
-          {imgSrc
-            ? <img src={imgSrc} alt="Ad Preview" style={{width:'100%',height:'100%',objectFit:'cover'}} />
-            : <div className="ad-mock-placeholder"><span style={{fontSize:'40px'}}>✦</span><span>Your Ad Image</span></div>
-          }
-        </div>
-        <div className="ad-mock-body">
-          <div style={{fontSize:'12px', color:'var(--muted)', marginBottom:'10px'}}>👍 ❤️ 234 &nbsp;·&nbsp; 45 Comments</div>
-          <button className="ad-mock-cta-btn" style={{width:'100%'}}>{adCreative.cta}</button>
-        </div>
-      </div>
-    );
-
-    if (selectedPlatform === "youtube") return (
-      <div className="ad-mock-frame">
-        <div className="ad-mock-image" style={{aspectRatio:'16/9', height:'auto', position:'relative'}}>
-          {imgSrc
-            ? <img src={imgSrc} alt="Ad Preview" style={{width:'100%',height:'100%',objectFit:'cover'}} />
-            : <div className="ad-mock-placeholder"><span style={{fontSize:'40px'}}>▶</span><span>Video Ad Preview</span></div>
-          }
-          <div style={{position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.8)', borderRadius:'4px', padding:'2px 6px', fontSize:'12px', color:'#fff'}}>0:15</div>
-        </div>
-        <div className="ad-mock-body">
-          <div style={{display:'flex', gap:'12px', alignItems:'flex-start'}}>
-            <div className="ad-mock-avatar" style={{flexShrink:0}}></div>
-            <div>
-              <div className="ad-mock-name">{adCreative.caption.substring(0, 60)}...</div>
-              <div className="ad-mock-sponsored" style={{marginBottom:'10px', marginTop:'4px'}}>vulpinix.ai · Ad · 1.2K views</div>
-              <button className="ad-mock-cta-btn">{adCreative.cta}</button>
-            </div>
-          </div>
-        </div>
+    return (
+      <div style={{ ...commonStyle, padding: 40, textAlign: "center" }}>
+        <Sparkles size={48} style={{ color: "#38bdf8", marginBottom: 20 }} />
+        <h4 style={{ margin: 0 }}>{currentPlatform.label}</h4>
+        <p style={{ color: "var(--vx-text-muted)", fontSize: 13, marginTop: 8 }}>High-fidelity preview for this platform is being generated by AI.</p>
       </div>
     );
   };
 
   return (
-    <div className="upload-page-wrapper">
-      <div className="scroll-bar" id="scrollBarAP"></div>
-      <div className="cosmos">
-        <div className="orb orb1"></div>
-        <div className="orb orb2"></div>
-        <div className="orb orb3"></div>
-      </div>
-      <div className="grid-bg"></div>
-      <div className="depth-ring"></div>
-      <div className="depth-ring"></div>
-      <div className="depth-ring"></div>
-
-      <div className="page" style={{maxWidth:'860px'}}>
-        <button className="back" onClick={() => navigate("/create-ad")}>← Back to Campaign Setup</button>
-
-        <div className="page-header">
-          <div className="page-eyebrow"><span className="eyebrow-dot"></span>VULPINIX AI 1.0</div>
-          <div className="page-title">Ad Preview &<br/>Final Targeting</div>
-          <div className="page-sub">Review your campaign details and refine your audience before launching</div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      style={{
+        background: "var(--vx-bg-primary)",
+        minHeight: "100vh",
+        padding: "100px 24px 120px",
+        color: "var(--vx-text-primary)"
+      }}
+    >
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        
+        {/* Header */}
+        <div style={{ marginBottom: 60 }}>
+          <button 
+            onClick={() => navigate("/create-ad")}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--vx-text-muted)", cursor: "pointer", fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-muted)"}
+          >
+            <ArrowLeft size={16} /> Edit Targeting
+          </button>
+          
+          <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.04em", margin: 0 }}>
+            Review & <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Launch</span>
+          </h1>
+          <p style={{ color: "var(--vx-text-secondary)", fontSize: 16, marginTop: 12 }}>Final check of your creative and audience reach.</p>
         </div>
 
-        {/* SECTION 1 — Ad Creative Preview */}
-        <div className="section-card delay-0" style={{width:'100%'}}>
-          <div className="card-glow"></div>
-          <div className="section-label"><span className="section-label-dot"></span>01 — Ad Creative Preview</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 40 }}>
+          
+          {/* Left Column: Preview */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Ad Preview</h3>
+                
+                {/* Custom Platform Dropdown */}
+                <div ref={platformDropdownRef} style={{ position: "relative" }}>
+                  <div 
+                    onClick={() => setIsPlatformDropdownOpen(!isPlatformDropdownOpen)}
+                    style={{ 
+                      background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 10, padding: "8px 14px", 
+                      color: "var(--vx-text-primary)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" 
+                    }}
+                  >
+                    <currentPlatform.icon size={14} style={{ color: currentPlatform.color }} />
+                    <span>{currentPlatform.label}</span>
+                    <ChevronDown size={14} style={{ transform: isPlatformDropdownOpen ? "rotate(180deg)" : "rotate(0)", transition: "0.3s" }} />
+                  </div>
+                  
+                  <AnimatePresence>
+                    {isPlatformDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        style={{ 
+                          position: "absolute", top: "100%", right: 0, marginTop: 8, background: "#0c0d18", 
+                          border: "1px solid var(--vx-border)", borderRadius: 12, overflow: "hidden", zIndex: 100, minWidth: 180, boxShadow: "0 15px 30px rgba(0,0,0,0.5)" 
+                        }}
+                      >
+                        {platforms.map(p => (
+                          <div 
+                            key={p.id} 
+                            onClick={() => { setSelectedPlatform(p.id as Platform); setIsPlatformDropdownOpen(false); }}
+                            style={{ 
+                              padding: "10px 14px", cursor: "pointer", transition: "0.2s", 
+                              background: selectedPlatform === p.id ? "rgba(255,255,255,0.05)" : "transparent",
+                              display: "flex", alignItems: "center", gap: 10
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+                            onMouseLeave={e => e.currentTarget.style.background = selectedPlatform === p.id ? "rgba(255,255,255,0.05)" : "transparent"}
+                          >
+                            <p.icon size={14} style={{ color: p.color }} />
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{p.label}</span>
+                            {selectedPlatform === p.id && <Check size={12} style={{ color: "#38bdf8", marginLeft: "auto" }} />}
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+              
+              <div style={{ display: "flex", justifyContent: "center", perspective: "1000px" }}>
+                {renderAdPreview()}
+              </div>
+            </div>
 
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', flexWrap:'wrap', gap:'12px'}}>
-            <div className="input-group" style={{flex:1, minWidth:'200px', position:'relative'}}>
-              <select
-                className="input-field"
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value as Platform)}
+            {/* AI Insights */}
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "24px", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, background: "radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%)" }} />
+              <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
+                <Zap size={20} style={{ color: "#38bdf8" }} /> AI Reach Analysis
+              </h3>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                <div style={{ background: "var(--vx-bg-input)", padding: "20px", borderRadius: 20, border: "1px solid var(--vx-border)" }}>
+                  <div style={{ color: "var(--vx-text-muted)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Est. Reach</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "var(--vx-text-primary)" }}>180K+</div>
+                  <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700, marginTop: 4 }}>↑ High Velocity</div>
+                </div>
+                <div style={{ background: "var(--vx-bg-input)", padding: "20px", borderRadius: 20, border: "1px solid var(--vx-border)" }}>
+                  <div style={{ color: "var(--vx-text-muted)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Est. CTR</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "var(--vx-text-primary)" }}>4.2%</div>
+                  <div style={{ fontSize: 11, color: "var(--vx-text-muted)", fontWeight: 700, marginTop: 4 }}>Predicted Avg.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Summary */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "32px" }}>
+              <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 32 }}>Campaign Summary</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {[
+                  { icon: Target, label: "Objective", value: campaignData.objective },
+                  { icon: DollarSign, label: "Total Budget", value: campaignData.totalAmount },
+                  { icon: Globe, label: "Locations", value: campaignData.locations.join(", ") },
+                  { icon: Users, label: "Target Audience", value: campaignData.audience.join(", ") },
+                ].map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px", background: "var(--vx-bg-input)", borderRadius: 16, border: "1px solid var(--vx-border)" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid var(--vx-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--vx-text-muted)" }}>
+                      <item.icon size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--vx-text-muted)" }}>{item.label}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)" }}>{item.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 40, padding: 24, borderRadius: 24, background: "rgba(167, 139, 250, 0.05)", border: "1px dashed rgba(167, 139, 250, 0.3)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--vx-text-muted)" }}>Platform Distribution</span>
+                  <PieChart size={16} style={{ color: "#a78bfa" }} />
+                </div>
+                <div style={{ display: "flex", gap: 6, height: 6, borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ flex: 4, background: "#38bdf8" }} />
+                  <div style={{ flex: 3, background: "#a78bfa" }} />
+                  <div style={{ flex: 3, background: "#10b981" }} />
+                </div>
+                <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#38bdf8" }} /> Instagram
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa" }} /> Facebook
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> YouTube
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Launch Actions */}
+            <div style={{ display: "flex", gap: 16 }}>
+              <button 
+                onClick={handleSaveDraft}
+                style={{ flex: 1, padding: "18px", borderRadius: 20, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
               >
-                <option value="instagram-feed">📸 Instagram Feed</option>
-                <option value="instagram-story">📱 Instagram Story</option>
-                <option value="facebook-feed">👍 Facebook Feed</option>
-                <option value="youtube">▶ YouTube</option>
-              </select>
+                <Save size={18} /> Save Draft
+              </button>
+              <button 
+                onClick={handleProceedToPayment}
+                style={{ flex: 2, padding: "18px", borderRadius: 20, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", border: "none", fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+              >
+                Confirm & Launch <CreditCard size={20} />
+              </button>
             </div>
-            <button className="btn-ai btn-ai-no" style={{flex:'none', padding:'10px 16px', fontSize:'12px'}} onClick={() => navigate("/upload")}>
-              ✎ Edit Creative
-            </button>
           </div>
 
-          <div style={{display:'flex', justifyContent:'center'}}>
-            {renderAdPreview()}
-          </div>
         </div>
 
-        {/* SECTION 2 — Advanced Audience Targeting */}
-        <div className="section-card delay-1" style={{width:'100%'}}>
-          <div className="card-glow"></div>
-          <div className="section-label"><span className="section-label-dot"></span>02 — Refine Your Audience</div>
-
-          {/* Age Range */}
-          <div style={{marginBottom:'24px'}}>
-            <div className="input-label" style={{marginBottom:'10px'}}>👤 Age Range: {ageMin} – {ageMax}</div>
-            <div style={{display:'flex', gap:'16px', alignItems:'center'}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:'11px', color:'var(--muted)', marginBottom:'6px'}}>Min: {ageMin}</div>
-                <input type="range" min={13} max={65} step={1} value={ageMin}
-                  onChange={(e) => setAgeMin(Math.min(Number(e.target.value), ageMax - 1))} />
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:'11px', color:'var(--muted)', marginBottom:'6px'}}>Max: {ageMax}</div>
-                <input type="range" min={13} max={65} step={1} value={ageMax}
-                  onChange={(e) => setAgeMax(Math.max(Number(e.target.value), ageMin + 1))} />
-              </div>
-            </div>
-          </div>
-
-          {/* Gender */}
-          <div style={{marginBottom:'24px'}}>
-            <div className="input-label" style={{marginBottom:'10px'}}>⚤ Gender</div>
-            <div style={{display:'flex', gap:'8px', flexWrap:'wrap'}}>
-              {(["all", "male", "female", "custom"] as Gender[]).map(g => (
-                <button
-                  key={g}
-                  onClick={() => setGender(g)}
-                  className={`btn-ai ${gender === g ? 'btn-ai-yes' : 'btn-ai-no'}`}
-                  style={{flex:'none', padding:'10px 20px', fontSize:'12px', textTransform:'capitalize'}}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Interests */}
-          <div style={{marginBottom:'24px'}}>
-            <div className="input-label" style={{marginBottom:'10px'}}>🎯 Interest Expansion</div>
-            <div className="plat-tags" style={{justifyContent:'flex-start'}}>
-              {interests.map(interest => (
-                <button
-                  key={interest.id}
-                  onClick={() => toggleInterest(interest.id)}
-                  className="plat-tag"
-                  style={interest.selected
-                    ? {background:'var(--purple)', color:'#fff', borderColor:'var(--purple)', cursor:'pointer'}
-                    : {cursor:'pointer', color:'var(--muted)', background:'rgba(255,255,255,0.03)'}
-                  }
-                >
-                  {interest.icon} {interest.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Device Targeting */}
-          <div>
-            <div className="input-label" style={{marginBottom:'10px'}}>📡 Device Targeting</div>
-            <div className="platform-grid" style={{gridTemplateColumns:'repeat(3, 1fr)'}}>
-              {devices.map(device => (
-                <div
-                  key={device.id}
-                  className={`plat-card ${device.selected ? 'active' : ''}`}
-                  onClick={() => toggleDevice(device.id)}
-                  style={{textAlign:'center', padding:'16px'}}
-                >
-                  <div style={{fontSize:'28px', marginBottom:'8px'}}>{device.icon}</div>
-                  <div className="plat-name" style={{textAlign:'center', fontSize:'12px'}}>{device.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 3 — AI Performance Prediction */}
-        <div className="section-card delay-2" style={{width:'100%'}}>
-          <div className="card-glow"></div>
-          <div className="section-label"><span className="section-label-dot"></span>03 — AI Performance Prediction</div>
-
-          <div className="ai-header" style={{marginBottom:'20px'}}>
-            <div className="ai-orb" style={{width:'56px', height:'56px', fontSize:'22px'}}>✦</div>
-            <div className="ai-title" style={{fontSize:'16px'}}>Estimated Campaign Results</div>
-          </div>
-
-          <div className="stat-grid" style={{gridTemplateColumns:'repeat(2, 1fr)', gap:'12px', marginBottom:'16px'}}>
-            <div className="stat-card">
-              <div className="stat-label">👥 Est. Reach</div>
-              <div className="stat-val" style={{fontSize:'20px'}}>{aiPredictions.estimatedReach}</div>
-              <div className="stat-sub" style={{color:'rgba(0,212,200,0.7)'}}>people</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">🖱 Click-Through Rate</div>
-              <div className="stat-val" style={{fontSize:'20px', color:'var(--teal)'}}>{aiPredictions.clickThroughRate}</div>
-              <div className="stat-sub">estimated CTR</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">💰 Cost Per Click</div>
-              <div className="stat-val" style={{fontSize:'20px'}}>{aiPredictions.costPerClick}</div>
-              <div className="stat-sub">avg CPC</div>
-            </div>
-            <div className="stat-card" style={{border:'1px solid rgba(52,211,153,0.3)', background:'rgba(52,211,153,0.04)'}}>
-              <div className="stat-label">📈 Performance Score</div>
-              <div className="stat-val" style={{fontSize:'20px', color:'#34d399'}}>{aiPredictions.performanceScore}<span style={{fontSize:'13px', color:'var(--muted)'}}>/100</span></div>
-              <div className="stat-bar"><div className="stat-bar-fill" style={{width:`${aiPredictions.performanceScore}%`, background:'linear-gradient(90deg, #34d399, #06d6c7)'}}></div></div>
-            </div>
-          </div>
-
-          <div style={{background:'rgba(0,212,200,0.05)', border:'1px solid rgba(0,212,200,0.15)', borderRadius:'12px', padding:'12px 16px', fontSize:'12px', color:'var(--muted)', display:'flex', gap:'8px', alignItems:'flex-start'}}>
-            <span style={{flexShrink:0}}>ⓘ</span>
-            <span>Predictions are AI-based estimates and may vary based on market conditions and competition.</span>
-          </div>
-        </div>
-
-        {/* SECTION 4 — Campaign Summary */}
-        <div className="section-card delay-3" style={{width:'100%'}}>
-          <div className="card-glow"></div>
-          <div className="section-label"><span className="section-label-dot"></span>04 — Campaign Summary</div>
-
-          <div className="summary-inner">
-            <div className="stat-grid" style={{gridTemplateColumns:'repeat(3,1fr)', width:'100%', marginBottom:'20px'}}>
-              <div className="stat-card">
-                <div className="stat-label">Budget</div>
-                <div className="stat-val" style={{fontSize:'18px'}}>{campaignData.budget}</div>
-                <div className="stat-sub">{campaignData.budgetType}</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-label">Duration</div>
-                <div className="stat-val" style={{fontSize:'18px', color:'var(--teal)'}}>{campaignData.duration}</div>
-                <div className="stat-sub">campaign run</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-label">Total Spend</div>
-                <div className="stat-val" style={{fontSize:'18px', color:'#34d399'}}>{campaignData.totalAmount || '—'}</div>
-                <div className="stat-sub">estimated</div>
-              </div>
-            </div>
-
-            {/* Summary rows */}
-            {[
-              { label: '🎯 Campaign Name', value: campaignData.name, nav: '/create-ad' },
-              { label: '📌 Objective', value: campaignData.objective, nav: '/create-ad' },
-            ].map(row => (
-              <div key={row.label} style={{width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-                <span style={{fontSize:'12px', color:'var(--muted)'}}>{row.label}</span>
-                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Inter', sans-serif", fontWeight:600}}>{row.value}</span>
-                  <button className="btn-ai btn-ai-no" style={{padding:'4px 10px', fontSize:'11px', flex:'none'}} onClick={() => navigate(row.nav)}>Edit</button>
-                </div>
-              </div>
-            ))}
-
-            <div style={{width:'100%', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-              <div style={{fontSize:'12px', color:'var(--muted)', marginBottom:'8px'}}>🌐 Platforms</div>
-              <div className="plat-tags" style={{justifyContent:'flex-start', margin:0}}>
-                {campaignData.platforms.map(p => <div key={p} className="plat-tag">{p}</div>)}
-              </div>
-            </div>
-
-            <div style={{width:'100%', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-              <div style={{fontSize:'12px', color:'var(--muted)', marginBottom:'8px'}}>📍 Locations</div>
-              <div className="plat-tags" style={{justifyContent:'flex-start', margin:0}}>
-                {campaignData.locations.map(l => <div key={l} className="plat-tag" style={{background:'rgba(99,51,255,0.1)', borderColor:'rgba(99,51,255,0.25)', color:'#a78bfa'}}>📍 {l}</div>)}
-              </div>
-            </div>
-
-            <div style={{width:'100%', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-              <div style={{fontSize:'12px', color:'var(--muted)', marginBottom:'8px'}}>👥 Audience</div>
-              <div className="plat-tags" style={{justifyContent:'flex-start', margin:0}}>
-                {campaignData.audience.map(a => <div key={a} className="plat-tag" style={{background:'rgba(0,212,200,0.1)', borderColor:'rgba(0,212,200,0.2)', color:'var(--teal)'}}>{a}</div>)}
-              </div>
-            </div>
-
-            <div style={{width:'100%', padding:'12px 0'}}>
-              <div style={{fontSize:'12px', color:'var(--muted)', marginBottom:'8px'}}>🌍 Languages</div>
-              <div className="plat-tags" style={{justifyContent:'flex-start', margin:0}}>
-                {campaignData.languages.map(l => <div key={l} className="plat-tag">{l}</div>)}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{display:'flex', gap:'12px', flexWrap:'wrap', justifyContent:'center', width:'100%', marginBottom:'120px'}}>
-          <button className="btn-ai btn-ai-no" style={{padding:'14px 24px', fontSize:'14px'}} onClick={() => navigate("/create-ad")}>
-            ← Back to Edit
-          </button>
-          <button className="btn-ai btn-ai-no" style={{padding:'14px 24px', fontSize:'14px', borderColor:'rgba(0,212,200,0.3) !important', color:'var(--teal)'}} onClick={handleSaveDraft}>
-            💾 Save as Draft
-          </button>
-        </div>
+        <footer style={{ marginTop: 80, textAlign: "center", borderTop: "1px solid var(--vx-border)", paddingTop: 40 }}>
+          <VulpinixLogo size="sm" />
+          <p style={{ color: "var(--vx-text-muted)", fontSize: 12, marginTop: 16, letterSpacing: "0.05em", fontWeight: 600 }}>
+            VULPINIX PLATFORM 1.0 — FINAL REVIEW STAGE
+          </p>
+        </footer>
       </div>
-
-      {/* Floating CTA */}
-      <div className="float-submit">
-        <button className="submit-btn" onClick={handleProceedToPayment}>
-          <span className="submit-icon">💳</span>
-          Proceed to Payment
-        </button>
-      </div>
-    </div>
+    </motion.div>
   );
 }
-
