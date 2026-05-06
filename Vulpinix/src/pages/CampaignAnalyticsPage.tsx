@@ -73,23 +73,56 @@ export default function CampaignAnalyticsPage() {
   const { id } = useParams<{ id: string }>();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const raw = localStorage.getItem("userCampaigns");
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
+    const fetchCampaignDetails = async () => {
+      const authToken = localStorage.getItem("authToken");
+      if (!authToken) {
+        // Fallback to localStorage if no token
+        const raw = localStorage.getItem("userCampaigns");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const all = Array.isArray(parsed) ? parsed : [...(parsed.inReview || []), ...(parsed.history || [])];
+          setCampaign(all.find((c: Campaign) => c.id === id) || null);
+        }
+        setIsLoading(false);
+        return;
+      }
 
-    let found: Campaign | null = null;
+      try {
+        const response = await fetch(`http://localhost:5000/api/campaign/${id}`, {
+          headers: { "Authorization": `Bearer ${authToken}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          setCampaign(data.campaign);
+        } else {
+          // Try local fallback if API fails
+          const raw = localStorage.getItem("userCampaigns");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const all = Array.isArray(parsed) ? parsed : [...(parsed.inReview || []), ...(parsed.history || [])];
+            setCampaign(all.find((c: Campaign) => c.id === id) || null);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch campaign details", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    if (Array.isArray(parsed)) {
-      found = parsed.find((c: Campaign) => c.id === id) || null;
-    } else {
-      // Legacy format
-      const all = [...(parsed.inReview || []), ...(parsed.history || [])];
-      found = all.find((c: Campaign) => c.id === id) || null;
-    }
-
-    setCampaign(found);
+    fetchCampaignDetails();
   }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (

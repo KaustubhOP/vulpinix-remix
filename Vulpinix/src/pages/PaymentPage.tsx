@@ -48,6 +48,7 @@ export default function PaymentPage() {
   // Load Campaign data
   const [campaignData, setCampaignData] = useState({
     name: "Summer Sale Campaign",
+    objective: "Brand Awareness",
     platforms: ["Instagram", "Facebook", "YouTube"],
     budgetType: "Daily",
     budget: "₹5,000",
@@ -94,35 +95,81 @@ export default function PaymentPage() {
 
   const handlePayment = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setShowSuccessModal(true);
-      
-      // Save campaign logic (kept from previous implementation)
+    
+    try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const authToken = localStorage.getItem("authToken");
+      const adCreative = JSON.parse(localStorage.getItem("adCreativeData") || "{}");
       const savedAdImage = localStorage.getItem("adPreviewImage") || "";
-      const uploadData = JSON.parse(localStorage.getItem("uploadData") || "{}");
-      
-      const newCampaign = {
-        id: Date.now().toString(),
+
+      // Construct payload for backend
+      const payload = {
+        userId: userInfo.email,
+        userName: userInfo.name,
+        userEmail: userInfo.email,
         businessName: userInfo.company || userInfo.name || "My Business",
-        userEmail: userInfo.email || "No email provided",
-        name: campaignData.name,
-        platforms: campaignData.platforms,
+        campaignName: campaignData.name,
+        objective: campaignData.objective,
         budget: campaignData.budget,
-        totalAmount: campaignData.totalAmount,
-        status: "pending",
-        dateSubmitted: new Date().toISOString().split("T")[0],
-        analytics: { impressions: 0, reach: 0, clicks: 0, ctr: 0, conversions: 0, adSpend: 0, roas: 0 }
+        budgetType: campaignData.budgetType,
+        platforms: campaignData.platforms,
+        duration: campaignData.duration,
+        estimatedReach: campaignData.estimatedReach,
+        adCaption: adCreative.caption || "",
+        adImage: savedAdImage, // This is base64
+        payment: {
+          amount: campaignData.totalAmount,
+          method: selectedMethod,
+          paymentId: `PAY-${Date.now()}`,
+          transactionId: `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+        }
       };
 
-      const existingRaw = localStorage.getItem("userCampaigns");
-      let campaigns = existingRaw ? JSON.parse(existingRaw) : [];
-      if (!Array.isArray(campaigns)) campaigns = [];
-      campaigns.unshift(newCampaign);
-      localStorage.setItem("userCampaigns", JSON.stringify(campaigns));
+      const response = await fetch("http://localhost:5000/api/campaign/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload)
+      });
 
-    }, 2500);
+      const data = await response.json();
+
+      if (data.success) {
+        setIsProcessing(false);
+        setShowSuccessModal(true);
+        
+        // Also keep a local copy for immediate feedback if needed, 
+        // though dashboard should now fetch from API
+        const newCampaign = {
+          id: data.campaign.id,
+          ...payload,
+          status: "pending",
+          dateSubmitted: new Date().toISOString().split("T")[0],
+          analytics: { impressions: 0, reach: 0, clicks: 0, ctr: 0, conversions: 0, adSpend: 0, roas: 0 }
+        };
+
+        const existingRaw = localStorage.getItem("userCampaigns");
+        let campaigns = existingRaw ? JSON.parse(existingRaw) : [];
+        if (!Array.isArray(campaigns)) campaigns = [];
+        campaigns.unshift(newCampaign);
+        localStorage.setItem("userCampaigns", JSON.stringify(campaigns));
+        
+        // Clear draft state
+        localStorage.removeItem("campaignData");
+        localStorage.removeItem("adCreativeData");
+        localStorage.removeItem("uploadData");
+        localStorage.removeItem("adPreviewImage");
+      } else {
+        toast.error(data.message || "Failed to create campaign on server.");
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Server connection failed. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   const paymentMethods = [

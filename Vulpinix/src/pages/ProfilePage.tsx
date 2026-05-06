@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import {
   User, Mail, Phone, MapPin, Building2, Edit2, Save, X, Clock,
   CheckCircle2, TrendingUp, Eye, MousePointer, DollarSign, Calendar,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Globe,
-  Link as LinkIcon, Sparkles, AlertCircle, BarChart3, History, Camera
+  Link as LinkIcon, Sparkles, AlertCircle, BarChart3, History, Camera, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,7 +32,7 @@ interface Ad {
   name: string;
   platforms: string[];
   budget: string;
-  status: "review" | "active" | "completed" | "paused";
+  status: "review" | "active" | "completed" | "paused" | "rejected";
   createdAt: string;
   reach?: string;
   clicks?: string;
@@ -68,10 +68,65 @@ export default function ProfilePage() {
     }
   );
 
-  // Load campaigns from localStorage
-  const campaigns = savedCampaigns ? JSON.parse(savedCampaigns) : { inReview: [], history: [] };
-  const adsInReview: Ad[] = campaigns.inReview || [];
-  const previousAds: Ad[] = campaigns.history || [];
+  // Campaigns State
+  const [adsInReview, setAdsInReview] = useState<Ad[]>([]);
+  const [previousAds, setPreviousAds] = useState<Ad[]>([]);
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+
+  // Fetch campaigns from backend
+  const fetchCampaigns = async () => {
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) return;
+
+    setIsLoadingCampaigns(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/campaign/my-campaigns", {
+        headers: { "Authorization": `Bearer ${authToken}` }
+      });
+      const data = await response.json();
+      
+      if (data.success && data.campaigns) {
+        console.log("Fetched campaigns:", data.campaigns);
+        toast.info(`Synced ${data.campaigns.length} campaigns from cloud.`);
+        
+        const normalized = data.campaigns.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          platforms: c.platforms,
+          budget: c.budget,
+          status: c.status === "pending" || c.status === "in_review" ? "review" : 
+                  c.status === "approved" || c.status === "running" ? "active" : 
+                  c.status === "completed" ? "completed" : 
+                  c.status === "rejected" ? "rejected" : "paused",
+          createdAt: c.dateSubmitted,
+          reach: c.analytics?.reach?.toLocaleString() || "0",
+          clicks: c.analytics?.clicks?.toLocaleString() || "0",
+          impressions: c.analytics?.impressions?.toLocaleString() || "0",
+          spent: `₹${c.analytics?.adSpend?.toLocaleString() || "0"}`
+        }));
+
+        setAdsInReview(normalized.filter((a: any) => a.status === "review"));
+        setPreviousAds(normalized.filter((a: any) => a.status !== "review"));
+      } else {
+        console.log("API response success but no campaigns or failure:", data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch campaigns:", err);
+      // Fallback to localStorage if API fails
+      const saved = localStorage.getItem("userCampaigns");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setAdsInReview(parsed.inReview || []);
+        setPreviousAds(parsed.history || []);
+      }
+    } finally {
+      setIsLoadingCampaigns(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
 
   // Temporary states for editing
   const [tempUserInfo, setTempUserInfo] = useState<UserInfo>(userInfo);
@@ -123,6 +178,7 @@ export default function ProfilePage() {
       case "active": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)", color: "#22c55e", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12} /> Active</span>;
       case "completed": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.2)", color: "#38bdf8", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12} /> Completed</span>;
       case "paused": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(156, 163, 175, 0.1)", border: "1px solid rgba(156, 163, 175, 0.2)", color: "#9ca3af", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><AlertCircle size={12} /> Paused</span>;
+      case "rejected": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#ef4444", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><X size={12} /> Rejected</span>;
     }
   };
 
@@ -339,6 +395,24 @@ export default function ProfilePage() {
                   <Clock size={18} />
                 </div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)", flex: 1 }}>Ads in Review</h3>
+                <button 
+                  onClick={fetchCampaigns} 
+                  disabled={isLoadingCampaigns}
+                  style={{ 
+                    display: "flex", alignItems: "center", gap: 6, background: "var(--vx-bg-input)", 
+                    border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", 
+                    padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: "pointer" 
+                  }}
+                >
+                  <motion.div
+                    animate={isLoadingCampaigns ? { rotate: 360 } : { rotate: 0 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <RefreshCw size={12} />
+                  </motion.div>
+                  {isLoadingCampaigns ? "Syncing..." : "Sync Now"}
+                </button>
                 <span style={{ padding: "4px 12px", borderRadius: 20, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 12, fontWeight: 700 }}>{adsInReview.length}</span>
               </div>
               
@@ -382,6 +456,24 @@ export default function ProfilePage() {
                   <History size={18} />
                 </div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)", flex: 1 }}>Campaign History</h3>
+                <button 
+                  onClick={fetchCampaigns} 
+                  disabled={isLoadingCampaigns}
+                  style={{ 
+                    display: "flex", alignItems: "center", gap: 6, background: "var(--vx-bg-input)", 
+                    border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", 
+                    padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: "pointer" 
+                  }}
+                >
+                  <motion.div
+                    animate={isLoadingCampaigns ? { rotate: 360 } : { rotate: 0 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <RefreshCw size={12} />
+                  </motion.div>
+                  {isLoadingCampaigns ? "Syncing..." : "Sync Now"}
+                </button>
                 <span style={{ padding: "4px 12px", borderRadius: 20, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 12, fontWeight: 700 }}>{previousAds.length}</span>
               </div>
               

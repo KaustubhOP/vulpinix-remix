@@ -29,7 +29,7 @@ import {
 import { toast } from "sonner";
 import { VulpinixLogo } from "../components/VulpinixLogo";
 
-type CampaignStatus = "pending" | "in_review" | "approved" | "rejected";
+type CampaignStatus = "pending" | "in_review" | "approved" | "rejected" | "running" | "completed";
 
 interface Campaign {
   id: string;
@@ -72,32 +72,39 @@ export default function CampaignsDashboardPage() {
     loadNotifications();
   }, []);
 
-  const loadCampaigns = () => {
-    const raw = localStorage.getItem("userCampaigns");
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setCampaigns(parsed);
-      } else {
-        const legacy: Campaign[] = [
-          ...(parsed.inReview || []).map((c: any) => ({
-            ...c,
-            businessName: c.businessName || c.name || "My Business",
-            dateSubmitted: c.createdAt || new Date().toISOString().split("T")[0],
-            status: "in_review" as CampaignStatus,
-          })),
-          ...(parsed.history || []).map((c: any) => ({
-            ...c,
-            businessName: c.businessName || c.name || "My Business",
-            dateSubmitted: c.createdAt || new Date().toISOString().split("T")[0],
-            status: c.status === "active" ? "approved" : c.status,
-          })),
-        ];
-        setCampaigns(legacy);
+  const loadCampaigns = async () => {
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      // Legacy fallback
+      const raw = localStorage.getItem("userCampaigns");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setCampaigns(Array.isArray(parsed) ? parsed : []);
+        } catch {}
       }
-    } catch (e) {
-      console.error("Failed to load campaigns", e);
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/campaign/my-campaigns", {
+        headers: { "Authorization": `Bearer ${authToken}` }
+      });
+      const data = await response.json();
+      
+      if (data.success && data.campaigns) {
+        setCampaigns(data.campaigns);
+      }
+    } catch (err) {
+      console.error("Failed to load campaigns from API", err);
+      // Fallback
+      const raw = localStorage.getItem("userCampaigns");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setCampaigns(Array.isArray(parsed) ? parsed : []);
+        } catch {}
+      }
     }
   };
 
@@ -154,6 +161,8 @@ export default function CampaignsDashboardPage() {
       case "pending":   return { color: "#fbbf24", icon: Clock, label: "Pending" };
       case "in_review": return { color: "#38bdf8", icon: RefreshCw, label: "In Review" };
       case "approved":  return { color: "#10b981", icon: CheckCircle2, label: "Live" };
+      case "running":   return { color: "#10b981", icon: TrendingUp, label: "Running" };
+      case "completed": return { color: "#38bdf8", icon: CheckCircle2, label: "Completed" };
       case "rejected":  return { color: "#f43f5e", icon: XCircle, label: "Action Needed" };
     }
   };
