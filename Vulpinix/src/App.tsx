@@ -4,6 +4,7 @@ import { Toaster } from './components/ui/sonner';
 import { useEffect } from 'react';
 import { initAnimations } from './utils/animations';
 import { useTheme } from './hooks/useTheme';
+import { BackToTop } from './components/BackToTop';
 
 export default function App() {
   // Initialize theme (sets data-theme on <html>, reads from localStorage)
@@ -57,6 +58,7 @@ export default function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <BackToTop />
       <Toaster />
     </>
   );
