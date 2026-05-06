@@ -1,5 +1,5 @@
 import { Button } from "./ui/button";
-import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload } from "lucide-react";
+import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
@@ -11,6 +11,8 @@ export function HeroSection() {
   const [userInfo, setUserInfo]   = useState<any>(null);
   const [scrolled, setScrolled]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [barsReady, setBarsReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -21,19 +23,39 @@ export function HeroSection() {
     }
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
     // progress bars animate on mount
     setTimeout(() => setBarsReady(true), 500);
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleGetStarted = () => {
     const isAuthenticated = !!localStorage.getItem("userInfo") || localStorage.getItem("isAuthenticated") === "true";
     if (isAuthenticated) {
-      navigate("/upload");
+      setDropdownOpen(!dropdownOpen);
     } else {
       const isReturning = !!localStorage.getItem("userEmail") || !!localStorage.getItem("returningUser");
       navigate(isReturning ? "/login" : "/signup");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userInfo");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userToken");
+    setUserInfo(null);
+    setDropdownOpen(false);
+    navigate("/");
   };
 
   const getUserInitials = () => {
@@ -147,25 +169,90 @@ export function HeroSection() {
               {isDark ? "☀️" : "🌙"}
             </button>
 
-            {userInfo && (
-              <button onClick={() => navigate("/profile")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "1px solid var(--vx-border)", background: "var(--vx-bg-card)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--vx-text-primary)", fontWeight: 700, fontSize: 13 }}>
-                  {userInfo?.picture
-                    ? <img src={userInfo.picture} alt={userInfo.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : getUserInitials()
-                  }
-                </div>
+            <div style={{ position: "relative" }} ref={dropdownRef}>
+              <button
+                onClick={handleGetStarted}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  border: "1px solid var(--vx-border)",
+                  color: userInfo ? "var(--vx-text-primary)" : "var(--vx-bg-primary)",
+                  background: userInfo ? "var(--vx-bg-input)" : "var(--vx-text-primary)",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+              >
+                {userInfo ? (
+                  <>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", overflow: "hidden", background: "var(--vx-bg-card)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>
+                      {userInfo.picture ? <img src={userInfo.picture} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : getUserInitials()}
+                    </div>
+                    <span>Account</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}><path d="m6 9 6 6 6-6"/></svg>
+                  </>
+                ) : "Get Started"}
               </button>
-            )}
 
-            <button
-              onClick={handleGetStarted}
-              style={{ padding: "8px 20px", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer", border: "1px solid var(--vx-border)", color: "var(--vx-bg-primary)", background: "var(--vx-text-primary)", transition: "all 0.2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-            >
-              Get Started
-            </button>
+              {dropdownOpen && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, width: 220,
+                  background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)",
+                  borderRadius: 12, padding: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+                  zIndex: 100, display: "flex", flexDirection: "column", gap: 4,
+                  backdropFilter: "blur(10px)"
+                }}>
+                  <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--vx-border)", marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--vx-text-primary)" }}>{userInfo?.name || "User"}</div>
+                    <div style={{ fontSize: 11, color: "var(--vx-text-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{userInfo?.email}</div>
+                  </div>
+                  
+                  <button
+                    onClick={() => { navigate("/upload"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <Upload size={16} color="#a78bfa" /> Upload Campaign
+                  </button>
+
+                  <button
+                    onClick={() => { navigate("/profile"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <User size={16} color="#38bdf8" /> My Profile
+                  </button>
+
+                  <button
+                    onClick={() => { navigate("/dashboard/campaigns"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <BarChart2 size={16} color="#4ade80" /> My Analytics
+                  </button>
+
+                  <div style={{ height: 1, background: "var(--vx-border)", margin: "4px 0" }} />
+
+                  <button
+                    onClick={handleLogout}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "#f43f5e", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(244,63,94,0.1)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <X size={16} /> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
 
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ display: "none", background: "transparent", border: "none", cursor: "pointer", color: "var(--vx-text-primary)", padding: 8 }} className="md:hidden block">
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
