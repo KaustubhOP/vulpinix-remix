@@ -168,11 +168,187 @@ export default function AdPreviewPage() {
       </motion.div>
     );
 
+    if (selectedPlatform === "instagram-story") return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={{ ...commonStyle, maxWidth: 270, aspectRatio: "9/16", position: "relative", overflow: "hidden", background: "#000", borderRadius: 28 }}
+      >
+        {/* Full-bleed background */}
+        <div style={{ position: "absolute", inset: 0 }}>
+          {previewImage ? (
+            <img src={previewImage} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Ad" />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: "linear-gradient(160deg, #2d0a5e 0%, #0f1a4a 45%, #0a2e1a 100%)" }}>
+              {/* Decorative blobs */}
+              <div style={{ position: "absolute", top: "25%", left: "50%", transform: "translate(-50%,-50%)", width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(167,139,250,0.5) 0%, transparent 70%)" }} />
+              <div style={{ position: "absolute", top: "55%", left: "30%", width: 80, height: 80, borderRadius: "50%", background: "radial-gradient(circle, rgba(56,189,248,0.35) 0%, transparent 70%)" }} />
+              {/* Central brand mark */}
+              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-60%)", textAlign: "center" }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>⚡</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: "-0.03em", textShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>Vulpinix AI</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4, fontWeight: 500 }}>AI-Powered Marketing</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom scrim gradient */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0) 100%)", zIndex: 2 }} />
+
+        {/* Progress bars */}
+        <div style={{ position: "absolute", top: 12, left: 10, right: 10, display: "flex", gap: 3, zIndex: 10 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ flex: 1, height: 2, borderRadius: 2, background: "rgba(255,255,255,0.3)", overflow: "hidden" }}>
+              <div style={{ width: i === 0 ? "100%" : i === 1 ? "45%" : "0%", height: "100%", background: "#fff", borderRadius: 2 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Header row */}
+        <div style={{ position: "absolute", top: 22, left: 10, right: 10, display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(45deg,#f09433,#e6683c,#bc1888)", padding: 1.5 }}>
+              <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#38bdf8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>V</div>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", lineHeight: 1 }}>vulpinix.ai</div>
+            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.6)", marginTop: 1.5 }}>Sponsored</div>
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", cursor: "pointer" }}>⋯</span>
+            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", cursor: "pointer" }}>✕</span>
+          </div>
+        </div>
+
+        {/* Bottom content */}
+        <div style={{ position: "absolute", bottom: 44, left: 14, right: 14, zIndex: 10 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: "#fff", margin: "0 0 6px", lineHeight: 1.45, textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
+            {adCreative.caption.substring(0, 72)}…
+          </p>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginBottom: 12 }}>
+            {adCreative.hashtags.slice(0, 2).join("  ")}
+          </div>
+          {/* Link pill button */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 16px", borderRadius: 99, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#fff" }}>↑ Learn More</span>
+          </div>
+        </div>
+
+        {/* Instagram-style reply bar */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
+          <div style={{ flex: 1, background: "rgba(255,255,255,0.12)", borderRadius: 99, padding: "6px 12px", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(6px)" }}>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>Send message</span>
+          </div>
+          <span style={{ fontSize: 16, cursor: "pointer" }}>❤️</span>
+        </div>
+      </motion.div>
+    );
+
+
+    if (selectedPlatform === "facebook-feed") return (
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={commonStyle}>
+        {/* FB Header */}
+        <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#38bdf8)", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Vulpinix AI</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 10, color: "var(--vx-text-muted)" }}>Sponsored</span>
+              <span style={{ fontSize: 10, color: "var(--vx-text-muted)" }}>·</span>
+              <span style={{ fontSize: 10, color: "#1877f2" }}>🌐</span>
+            </div>
+          </div>
+          <div style={{ fontSize: 18, color: "var(--vx-text-muted)", cursor: "pointer" }}>···</div>
+        </div>
+        {/* Caption */}
+        <div style={{ padding: "0 14px 10px" }}>
+          <p style={{ fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+            {adCreative.caption.substring(0, 100)}...{" "}
+            <span style={{ color: "var(--vx-text-muted)", fontSize: 12 }}>See more</span>
+          </p>
+        </div>
+        {/* Image — 1.91:1 Facebook ratio */}
+        <div style={{ aspectRatio: "1.91/1", background: "var(--vx-bg-input)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {previewImage ? (
+            <img src={previewImage} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Ad" />
+          ) : (
+            <div style={{ textAlign: "center", color: "var(--vx-text-muted)" }}>
+              <Globe size={28} style={{ marginBottom: 8, opacity: 0.3 }} />
+              <div style={{ fontSize: 11 }}>Ad Visual</div>
+            </div>
+          )}
+        </div>
+        {/* CTA strip */}
+        <div style={{ padding: "10px 14px", background: "var(--vx-bg-input)", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--vx-border)" }}>
+          <div>
+            <div style={{ fontSize: 10, color: "var(--vx-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>vulpinix.ai</div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>AI-Powered Marketing</div>
+          </div>
+          <button style={{ padding: "8px 16px", borderRadius: 8, background: "#1877f2", color: "#fff", border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>
+            Learn More
+          </button>
+        </div>
+        {/* Reactions bar */}
+        <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--vx-border)" }}>
+          {["👍 Like", "💬 Comment", "↗️ Share"].map(a => (
+            <button key={a} style={{ flex: 1, background: "none", border: "none", color: "var(--vx-text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 0" }}>{a}</button>
+          ))}
+        </div>
+      </motion.div>
+    );
+
+    if (selectedPlatform === "youtube") return (
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ ...commonStyle, maxWidth: 380 }}>
+        {/* Video area 16:9 */}
+        <div style={{ aspectRatio: "16/9", background: "#0a0a0a", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {previewImage ? (
+            <img src={previewImage} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Ad" />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#1a0a2e,#0a1a3a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 0, height: 0, borderTop: "14px solid transparent", borderBottom: "14px solid transparent", borderLeft: "22px solid #fff", marginLeft: 4 }} />
+              </div>
+            </div>
+          )}
+          {/* Skip Ad button */}
+          <div style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,0.75)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "5px 10px", borderRadius: 4, display: "flex", alignItems: "center", gap: 4 }}>
+            Skip Ad ▶
+          </div>
+          {/* Ad badge */}
+          <div style={{ position: "absolute", top: 8, left: 8, background: "#ffdd44", color: "#000", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 3, letterSpacing: "0.05em" }}>
+            AD
+          </div>
+          {/* Video progress bar */}
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: "rgba(255,255,255,0.2)" }}>
+            <div style={{ width: "32%", height: "100%", background: "#ff0000" }} />
+          </div>
+        </div>
+        {/* Channel info */}
+        <div style={{ padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#a78bfa,#38bdf8)", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3 }}>
+              {adCreative.caption.substring(0, 55)}...
+            </div>
+            <div style={{ fontSize: 11, color: "var(--vx-text-muted)", marginTop: 3 }}>Vulpinix AI · Sponsored</div>
+          </div>
+        </div>
+        {/* CTA */}
+        <div style={{ padding: "0 14px 14px" }}>
+          <button style={{ width: "100%", padding: "10px", borderRadius: 8, background: "#ff0000", color: "#fff", border: "none", fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Youtube size={16} /> Visit Website
+          </button>
+        </div>
+      </motion.div>
+    );
+
     return (
       <div style={{ ...commonStyle, padding: 40, textAlign: "center" }}>
         <Sparkles size={48} style={{ color: "#38bdf8", marginBottom: 20 }} />
         <h4 style={{ margin: 0 }}>{currentPlatform.label}</h4>
-        <p style={{ color: "var(--vx-text-muted)", fontSize: 13, marginTop: 8 }}>High-fidelity preview for this platform is being generated by AI.</p>
+        <p style={{ color: "var(--vx-text-muted)", fontSize: 13, marginTop: 8 }}>Preview unavailable.</p>
       </div>
     );
   };

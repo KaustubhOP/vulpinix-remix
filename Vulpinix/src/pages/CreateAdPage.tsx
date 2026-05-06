@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import Lottie from "lottie-react";
+import mapAnimation from "../Watch_demo/map.json";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -234,7 +236,7 @@ export default function CreateAdPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         style={{ 
-                          position: "absolute", top: "100%", left: 0, right: 0, marginTop: 8, background: "#0c0d18", 
+                          position: "absolute", top: "100%", left: 0, right: 0, marginTop: 8, background: "var(--vx-bg-card)", 
                           border: "1px solid var(--vx-border)", borderRadius: 16, overflow: "hidden", zIndex: 100, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" 
                         }}
                       >
@@ -311,84 +313,217 @@ export default function CreateAdPage() {
           {/* Step 3: Audience & Location */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
             
-            {/* Location with Map Graphic */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 32, padding: "40px", position: "relative", overflow: "hidden" }}>
-              
-              {/* Stylized Map Graphic in Background */}
-              <div style={{ position: "absolute", top: 0, right: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.15 }}>
-                <svg viewBox="0 0 800 400" style={{ width: "100%", height: "100%" }}>
-                  <path d="M150,150 Q200,100 250,150 T350,150 T450,150 T550,150 T650,150" fill="none" stroke="var(--vx-text-primary)" strokeWidth="0.5" strokeDasharray="4 4" />
-                  <circle cx="200" cy="150" r="3" fill="#38bdf8" />
-                  <circle cx="300" cy="180" r="3" fill="#a78bfa" />
-                  <circle cx="500" cy="120" r="3" fill="#38bdf8" />
-                  <circle cx="600" cy="220" r="3" fill="#a78bfa" />
-                  {/* Simplistic World Outlines */}
-                  <path d="M100,200 L120,180 L150,190 L180,170 L200,190 L220,180 L250,200 L230,220 L200,210 L180,230 L150,220 L120,240 Z" fill="rgba(255,255,255,0.05)" />
-                  <path d="M400,150 L430,130 L470,140 L500,120 L530,140 L550,160 L530,190 L500,200 L470,180 L430,190 L410,170 Z" fill="rgba(255,255,255,0.05)" />
-                </svg>
+            {/* Left column: Location + Language */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Location Targeting Card */}
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 32, padding: "32px", position: "relative", overflow: "hidden" }}>
+
+              <style>{`
+                @keyframes vx-pin-pulse {
+                  0%, 100% { transform: scale(1); opacity: 0.7; }
+                  50% { transform: scale(1.8); opacity: 0; }
+                }
+                @keyframes vx-pin-drop {
+                  0% { transform: translateY(-16px); opacity: 0; }
+                  60% { transform: translateY(4px); opacity: 1; }
+                  80% { transform: translateY(-2px); }
+                  100% { transform: translateY(0); }
+                }
+                .vx-map-pin { animation: vx-pin-drop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+                .vx-map-pin-ring { animation: vx-pin-pulse 1.8s ease-in-out infinite; }
+              `}</style>
+
+              <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
+                <MapPin size={22} style={{ color: "#a78bfa" }} />
+                <h3 style={{ fontSize: 18, fontWeight: 800 }}>Location Targeting</h3>
               </div>
 
-              <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, position: "relative", zIndex: 1 }}>
-                <MapPin size={24} style={{ color: "var(--vx-text-primary)" }} />
-                <h3 style={{ fontSize: 20, fontWeight: 800 }}>Location Targeting</h3>
-              </div>
-              
-              <div style={{ display: "flex", gap: 8, marginBottom: 20, position: "relative", zIndex: 1 }}>
-                <button onClick={() => setLocationType("worldwide")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--vx-border)", background: locationType === "worldwide" ? "var(--vx-text-primary)" : "var(--vx-bg-input)", color: locationType === "worldwide" ? "var(--vx-bg-primary)" : "var(--vx-text-primary)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Worldwide</button>
-                <button onClick={() => setLocationType("india")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--vx-border)", background: locationType === "india" ? "var(--vx-text-primary)" : "var(--vx-bg-input)", color: locationType === "india" ? "var(--vx-bg-primary)" : "var(--vx-text-primary)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>India</button>
-                <button onClick={() => setLocationType("custom")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--vx-border)", background: locationType === "custom" ? "var(--vx-text-primary)" : "var(--vx-bg-input)", color: locationType === "custom" ? "var(--vx-bg-primary)" : "var(--vx-text-primary)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Custom</button>
+              {/* Toggle Buttons */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {(["worldwide", "india", "custom"] as const).map(type => (
+                  <button key={type} onClick={() => setLocationType(type)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1px solid ${locationType === type ? "#a78bfa" : "var(--vx-border)"}`, background: locationType === type ? "rgba(167,139,250,0.15)" : "var(--vx-bg-input)", color: locationType === type ? "#a78bfa" : "var(--vx-text-muted)", fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all 0.2s", textTransform: "capitalize" }}>
+                    {type === "worldwide" ? "🌍 World" : type === "india" ? "🇮🇳 India" : "📍 Custom"}
+                  </button>
+                ))}
               </div>
 
+              {/* ── LOTTIE MAP ── */}
+              <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(56,189,248,0.2)", background: "#080c18", marginBottom: 16, position: "relative" }}>
+                <Lottie
+                  animationData={mapAnimation}
+                  loop
+                  autoplay
+                  style={{ width: "100%", display: "block" }}
+                />
+              </div>
+
+              {/* Custom location input */}
               {locationType === "custom" && (
-                <div style={{ position: "relative", zIndex: 1 }}>
-                  <input 
-                    type="text" 
-                    placeholder="Search locations..."
-                    value={locationSearch}
-                    onChange={e => setLocationSearch(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addLocation(locationSearch)}
-                    style={{ width: "100%", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "12px 16px", color: "var(--vx-text-primary)", outline: "none", marginBottom: 12 }}
-                  />
+                <div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <input
+                      type="text"
+                      placeholder="Type a city and press Enter…"
+                      value={locationSearch}
+                      onChange={e => setLocationSearch(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addLocation(locationSearch)}
+                      style={{ flex: 1, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 10, padding: "10px 14px", color: "var(--vx-text-primary)", fontSize: 13, outline: "none" }}
+                    />
+                    <button onClick={() => addLocation(locationSearch)} style={{ padding: "10px 16px", borderRadius: 10, background: "#a78bfa", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                      <Plus size={16} />
+                    </button>
+                  </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {customLocations.map(loc => (
-                      <div key={loc} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid var(--vx-border)", fontSize: 12, fontWeight: 600 }}>
-                        {loc} <X size={14} style={{ cursor: "pointer" }} onClick={() => removeLocation(loc)} />
-                      </div>
-                    ))}
+                    {customLocations.map((loc, i) => {
+                      const colors = ["#a78bfa","#38bdf8","#4ade80","#fb923c","#f472b6"];
+                      const c = colors[i % colors.length];
+                      return (
+                        <div key={loc} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: `${c}15`, border: `1px solid ${c}40`, fontSize: 12, fontWeight: 700, color: c }}>
+                          📍 {loc}
+                          <X size={13} style={{ cursor: "pointer", opacity: 0.7 }} onClick={() => removeLocation(loc)} />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
-              
+
               {locationType !== "custom" && (
-                <div style={{ color: "var(--vx-text-muted)", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
-                  <Globe size={16} /> Targeted to {locationType === "worldwide" ? "all regions" : "India only"}
+                <div style={{ color: "var(--vx-text-muted)", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Globe size={14} />
+                  Targeting {locationType === "worldwide" ? "all global regions" : "India — all states & territories"}
                 </div>
               )}
+            </div>
+
+              {/* Language Preferences */}
+              <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "28px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <Languages size={20} style={{ color: "#38bdf8" }} />
+                    <h3 style={{ fontSize: 17, fontWeight: 800 }}>Ad Languages</h3>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--vx-text-muted)", fontWeight: 600 }}>
+                    {languages.filter(l => l.selected).length}/{languages.length} active
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                  {languages.map(lang => (
+                    <button
+                      key={lang.id}
+                      onClick={() => setLanguages(languages.map(l => l.id === lang.id ? { ...l, selected: !l.selected } : l))}
+                      style={{
+                        padding: "9px 20px", borderRadius: 99, cursor: "pointer",
+                        border: `1px solid ${lang.selected ? "rgba(56,189,248,0.6)" : "var(--vx-border)"}`,
+                        background: lang.selected ? "rgba(56,189,248,0.12)" : "var(--vx-bg-input)",
+                        color: lang.selected ? "#38bdf8" : "var(--vx-text-muted)",
+                        fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+                        boxShadow: lang.selected ? "0 0 10px rgba(56,189,248,0.18)" : "none",
+                      }}
+                    >
+                      {lang.selected && <span style={{ marginRight: 5, fontSize: 10 }}>✓</span>}
+                      {lang.name}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: "var(--vx-text-muted)", lineHeight: 1.7, margin: 0 }}>
+                  Ads will be served in selected languages based on viewer preferences and regional settings.
+                </p>
+              </div>
             </div>
 
             {/* Audience */}
             <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "32px" }}>
-              <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24 }}>
-                <Users size={24} style={{ color: "var(--vx-text-primary)" }} />
-                <h3 style={{ fontSize: 20, fontWeight: 800 }}>Target Audience</h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <Users size={22} style={{ color: "#a78bfa" }} />
+                  <h3 style={{ fontSize: 18, fontWeight: 800 }}>Target Audience</h3>
+                </div>
+                {audiences.filter(a => a.selected).length > 0 && (
+                  <div style={{ padding: "4px 12px", borderRadius: 99, background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", fontSize: 11, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.05em" }}>
+                    {audiences.filter(a => a.selected).length} SELECTED
+                  </div>
+                )}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-                {audiences.map(aud => (
-                  <button 
-                    key={aud.id}
-                    onClick={() => toggleAudience(aud.id)}
-                    style={{ 
-                      aspectRatio: "1/1", borderRadius: 16, border: "1px solid var(--vx-border)", 
-                      background: aud.selected ? "var(--vx-text-primary)" : "var(--vx-bg-input)", 
-                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", transition: "0.2s" 
-                    }}
-                  >
-                    <span style={{ fontSize: 20 }}>{aud.icon}</span>
-                    <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", color: aud.selected ? "var(--vx-bg-primary)" : "var(--vx-text-muted)" }}>{aud.name}</span>
-                  </button>
-                ))}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(() => {
+                  const palette: Record<string, {color: string; bg: string; border: string}> = {
+                    gaming:        { color: "#a78bfa", bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.5)" },
+                    travel:        { color: "#38bdf8", bg: "rgba(56,189,248,0.12)",  border: "rgba(56,189,248,0.5)"  },
+                    business:      { color: "#4ade80", bg: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.5)"  },
+                    shopping:      { color: "#fb923c", bg: "rgba(251,146,60,0.12)",  border: "rgba(251,146,60,0.5)"  },
+                    students:      { color: "#f472b6", bg: "rgba(244,114,182,0.12)", border: "rgba(244,114,182,0.5)" },
+                    fitness:       { color: "#34d399", bg: "rgba(52,211,153,0.12)",  border: "rgba(52,211,153,0.5)"  },
+                    entertainment: { color: "#fbbf24", bg: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.5)"  },
+                    tech:          { color: "#60a5fa", bg: "rgba(96,165,250,0.12)",  border: "rgba(96,165,250,0.5)"  },
+                  };
+                  const descriptions: Record<string, string> = {
+                    gaming: "Gamers & esports fans",
+                    travel: "Frequent travellers",
+                    business: "Entrepreneurs & professionals",
+                    shopping: "Online shoppers",
+                    students: "College & school students",
+                    fitness: "Health & gym enthusiasts",
+                    entertainment: "Music, movies & content",
+                    tech: "Early adopters & techies",
+                  };
+                  return audiences.map(aud => {
+                    const p = palette[aud.id] ?? { color: "#a78bfa", bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.4)" };
+                    return (
+                      <button
+                        key={aud.id}
+                        onClick={() => toggleAudience(aud.id)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 14,
+                          padding: "12px 16px", borderRadius: 14, cursor: "pointer",
+                          border: `1px solid ${aud.selected ? p.border : "var(--vx-border)"}`,
+                          background: aud.selected ? p.bg : "var(--vx-bg-input)",
+                          transition: "all 0.2s ease",
+                          boxShadow: aud.selected ? `0 0 12px ${p.color}22` : "none",
+                          textAlign: "left", width: "100%",
+                        }}
+                      >
+                        {/* Icon pill */}
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+                          background: aud.selected ? `${p.color}25` : "var(--vx-bg-card)",
+                          border: `1px solid ${aud.selected ? p.border : "var(--vx-border)"}`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 18, transition: "all 0.2s",
+                        }}>
+                          {aud.icon}
+                        </div>
+                        {/* Text */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: aud.selected ? p.color : "var(--vx-text-primary)", marginBottom: 1 }}>
+                            {aud.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--vx-text-muted)", fontWeight: 500 }}>
+                            {descriptions[aud.id]}
+                          </div>
+                        </div>
+                        {/* Check indicator */}
+                        <div style={{
+                          width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                          background: aud.selected ? p.color : "transparent",
+                          border: `1.5px solid ${aud.selected ? p.color : "var(--vx-border)"}`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 0.2s",
+                        }}>
+                          {aud.selected && (
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5l2.5 2.5L8 3" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </div>
+
 
           </div>
 
