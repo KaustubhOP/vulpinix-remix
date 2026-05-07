@@ -175,13 +175,8 @@ export default function CreateAdPage() {
             <ArrowLeft size={16} /> Back to Content
           </button>
           
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "4px 12px", borderRadius: 99, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--vx-text-muted)" }}>
-              <Zap size={12} fill="currentColor" /> Campaign Setup
-            </div>
-          </div>
           
-          <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.04em", margin: 0, lineHeight: 1 }}>
+          <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.04em", margin: 0, lineHeight: 1, paddingTop: 20 }}>
             Configure Your <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Campaign</span>
           </h1>
         </div>
@@ -236,8 +231,8 @@ export default function CreateAdPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         style={{ 
-                          position: "absolute", top: "100%", left: 0, right: 0, marginTop: 8, background: "var(--vx-bg-card)", 
-                          border: "1px solid var(--vx-border)", borderRadius: 16, overflow: "hidden", zIndex: 100, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" 
+                          position: "absolute", top: "100%", left: 0, right: 0, marginTop: 8, background: "#0c0d18", 
+                          border: "1px solid var(--vx-border)", borderRadius: 16, overflow: "hidden", zIndex: 100, boxShadow: "0 20px 40px rgba(0,0,0,0.6)" 
                         }}
                       >
                         {objectives.map(o => (
