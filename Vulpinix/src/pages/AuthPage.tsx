@@ -329,7 +329,7 @@ export default function AuthPage() {
           {/* LOGIN */}
           {authMode === "login" && (
             <form onSubmit={handleLogin}>
-              <div className="auth-heading">Welcome back 👋</div>
+              <div className="auth-heading">Welcome back</div>
               <div className="auth-subheading">Sign in to continue to Vulpinix AI</div>
 
               <div className="auth-socials">
