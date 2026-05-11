@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Clock,
   CheckCircle2,
-
   XCircle,
   BarChart3,
   Bell,
@@ -15,16 +14,13 @@ import {
   ChevronUp,
   RefreshCw,
   Calendar,
-
   Instagram,
   Facebook,
   Youtube,
   Linkedin,
   Twitter,
   Globe,
-
   TrendingUp,
-
   Plus
 } from "lucide-react";
 import { toast } from "sonner";
@@ -67,16 +63,30 @@ export default function CampaignsDashboardPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [expandedRejections, setExpandedRejections] = useState<Set<string>>(new Set());
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
 
   useEffect(() => {
+    const userInfoStr = localStorage.getItem("userInfo");
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (!userInfoStr || isAuthenticated !== "true") {
+      navigate("/auth", { replace: true });
+    } else {
+      try {
+        const u = JSON.parse(userInfoStr);
+        if (!u.onboardingCompleted) {
+          navigate("/onboarding", { replace: true });
+        }
+      } catch (e) {
+        console.error("Auth guard error:", e);
+      }
+    }
     loadCampaigns();
     loadNotifications();
-  }, []);
+  }, [navigate]);
 
   const loadCampaigns = async () => {
     const authToken = localStorage.getItem("authToken");
     if (!authToken) {
-      // Legacy fallback
       const raw = localStorage.getItem("userCampaigns");
       if (raw) {
         try {
@@ -87,18 +97,17 @@ export default function CampaignsDashboardPage() {
       return;
     }
 
+    setIsLoadingCampaigns(true);
     try {
       const response = await fetch(`${API_BASE}/api/campaign/my-campaigns`, {
         headers: { "Authorization": `Bearer ${authToken}` }
       });
       const data = await response.json();
-      
       if (data.success && data.campaigns) {
         setCampaigns(data.campaigns);
       }
     } catch (err) {
       console.error("Failed to load campaigns from API", err);
-      // Fallback
       const raw = localStorage.getItem("userCampaigns");
       if (raw) {
         try {
@@ -106,6 +115,8 @@ export default function CampaignsDashboardPage() {
           setCampaigns(Array.isArray(parsed) ? parsed : []);
         } catch {}
       }
+    } finally {
+      setIsLoadingCampaigns(false);
     }
   };
 
@@ -151,265 +162,153 @@ export default function CampaignsDashboardPage() {
       case "instagram": return <Instagram {...props} />;
       case "facebook": return <Facebook {...props} />;
       case "youtube": return <Youtube {...props} />;
-      case "twitter": return <Twitter {...props} />;
       case "linkedin": return <Linkedin {...props} />;
+      case "twitter":
+      case "x": return <Twitter {...props} />;
       default: return <Globe {...props} />;
     }
   };
 
-  const getStatusStyle = (status: CampaignStatus) => {
+  const getStatusColor = (status: CampaignStatus) => {
     switch (status) {
-      case "pending":   return { color: "#fbbf24", icon: Clock, label: "Pending" };
-      case "in_review": return { color: "#38bdf8", icon: RefreshCw, label: "In Review" };
-      case "approved":  return { color: "#10b981", icon: CheckCircle2, label: "Live" };
-      case "running":   return { color: "#10b981", icon: TrendingUp, label: "Running" };
-      case "completed": return { color: "#38bdf8", icon: CheckCircle2, label: "Completed" };
-      case "rejected":  return { color: "#f43f5e", icon: XCircle, label: "Action Needed" };
+      case "pending":
+      case "in_review": return "#eab308";
+      case "approved":
+      case "running": return "#22c55e";
+      case "completed": return "#38bdf8";
+      case "rejected": return "#ef4444";
+      default: return "#94a3b8";
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      style={{
-        background: "var(--vx-bg-primary)",
-        minHeight: "100vh",
-        padding: "100px 24px 60px",
-        color: "var(--vx-text-primary)"
-      }}
-    >
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", background: "#080b14", color: "#fff", padding: "40px 24px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         
-        {/* Top Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 20 }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 48 }}>
           <div>
-            <button 
-              onClick={() => navigate("/")}
-              style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--vx-text-muted)", cursor: "pointer", fontSize: 14, fontWeight: 600, marginBottom: 12, padding: 0 }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-muted)"}
-            >
-              <ArrowLeft size={16} /> Back to Dashboard
-            </button>
-            <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.5rem)", fontWeight: 800, letterSpacing: "-0.02em", margin: 0 }}>
-              My <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Campaigns</span>
-            </h1>
-            <p style={{ color: "var(--vx-text-secondary)", fontSize: 16, marginTop: 8 }}>Track your active promotions and ad performance</p>
+            <VulpinixLogo size="md" style={{ marginBottom: 16 }} />
+            <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.02em" }}>Campaign Management</h1>
+            <p style={{ color: "#94a3b8" }}>Monitor and manage your AI-powered advertising campaigns.</p>
           </div>
-          
-          <button
+          <button 
             onClick={() => navigate("/upload")}
-            style={{ 
-              padding: "12px 24px", borderRadius: 12, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", 
-              border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "transform 0.2s" 
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
-            onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+            style={{ padding: "12px 24px", borderRadius: 16, background: "linear-gradient(135deg, #a78bfa, #38bdf8)", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 20px rgba(167, 139, 250, 0.2)" }}
           >
-            <Plus size={18} /> New Campaign
+            <Plus size={20} /> Create Campaign
           </button>
         </div>
 
         {/* Notifications */}
         <AnimatePresence>
-          {notifications.map((notif) => (
-            <motion.div
-              key={notif.id}
+          {notifications.map(n => (
+            <motion.div 
+              key={n.id}
               initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-              animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
+              animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              style={{ 
-                background: "rgba(56, 189, 248, 0.05)", 
-                border: "1px solid rgba(56, 189, 248, 0.2)", 
-                borderRadius: 16, 
-                padding: "16px 20px", 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 16,
-                overflow: "hidden"
-              }}
+              style={{ overflow: "hidden" }}
             >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(56, 189, 248, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8", flexShrink: 0 }}>
-                <Bell size={20} />
+              <div style={{ background: "rgba(234, 179, 8, 0.1)", border: "1px solid rgba(234, 179, 8, 0.2)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16 }}>
+                <Bell size={20} style={{ color: "#eab308" }} />
+                <div style={{ flex: 1, fontSize: 14 }}>{n.message}</div>
+                <button onClick={() => dismissNotification(n.id)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}><X size={18} /></button>
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "var(--vx-text-primary)" }}>{notif.message}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--vx-text-muted)" }}>{new Date(notif.timestamp).toLocaleString()}</p>
-              </div>
-              <button onClick={() => dismissNotification(notif.id)} style={{ background: "none", border: "none", color: "var(--vx-text-muted)", cursor: "pointer", padding: 4 }}>
-                <X size={18} />
-              </button>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {/* Stats Row */}
-        {campaigns.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, marginBottom: 40 }}>
-            {[
-              { label: "Total", count: campaigns.length, color: "#a78bfa" },
-              { label: "Live", count: campaigns.filter(c => c.status === "approved").length, color: "#10b981" },
-              { label: "Review", count: campaigns.filter(c => c.status === "in_review" || c.status === "pending").length, color: "#38bdf8" },
-              { label: "Action", count: campaigns.filter(c => c.status === "rejected").length, color: "#f43f5e" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 16, padding: "20px", textAlign: "center" }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "var(--vx-text-primary)" }}>{s.count}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>{s.label}</div>
+        {/* Stats Summary */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24, marginBottom: 48 }}>
+          {[
+            { label: "Active Campaigns", val: campaigns.filter(c => c.status === "running").length, icon: <TrendingUp size={20} />, color: "#22c55e" },
+            { label: "In Review", val: campaigns.filter(c => c.status === "pending" || c.status === "in_review").length, icon: <Clock size={20} />, color: "#eab308" },
+            { label: "Total Spent", val: `₹${campaigns.reduce((acc, c) => acc + (c.analytics?.adSpend || 0), 0).toLocaleString()}`, icon: <BarChart3 size={20} />, color: "#38bdf8" },
+          ].map((stat, i) => (
+            <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#94a3b8", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
+                <div style={{ color: stat.color }}>{stat.icon}</div>
+                {stat.label}
               </div>
-            ))}
-          </div>
-        )}
+              <div style={{ fontSize: 28, fontWeight: 800 }}>{stat.val}</div>
+            </div>
+          ))}
+        </div>
 
         {/* Campaign List */}
-        {campaigns.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 20px", background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24 }}>
-            <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--vx-bg-input)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", color: "var(--vx-text-muted)" }}>
-              <BarChart3 size={32} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {campaigns.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "80px 24px", background: "rgba(255,255,255,0.02)", borderRadius: 32, border: "2px dashed rgba(255,255,255,0.05)" }}>
+              <BarChart3 size={48} style={{ margin: "0 auto 24px", opacity: 0.2 }} />
+              <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>No Campaigns Found</h2>
+              <p style={{ color: "#94a3b8", marginBottom: 24 }}>Start your first AI-powered campaign to see it here.</p>
+              <button onClick={() => navigate("/upload")} style={{ padding: "12px 32px", borderRadius: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Upload Content</button>
             </div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>No active campaigns</h3>
-            <p style={{ color: "var(--vx-text-muted)", marginBottom: 32 }}>Ready to grow? Create your first campaign in minutes.</p>
-            <button
-              onClick={() => navigate("/upload")}
-              style={{ padding: "14px 32px", borderRadius: 12, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", border: "none", fontWeight: 700, cursor: "pointer" }}
-            >
-              Get Started Now
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {campaigns.map((campaign, idx) => {
-              const status = getStatusStyle(campaign.status);
-              const isExpanded = expandedRejections.has(campaign.id);
-              
-              return (
-                <motion.div
-                  key={campaign.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  style={{
-                    background: "var(--vx-bg-card)",
-                    border: "1px solid var(--vx-border)",
-                    borderRadius: 24,
-                    padding: "24px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 20,
-                    transition: "border-color 0.2s",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--vx-border-hover)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--vx-border)"}
-                >
-                  {/* Status Indicator Bar */}
-                  <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: status.color }} />
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-                    <div style={{ display: "flex", gap: 16 }}>
-                      <div style={{ width: 50, height: 50, borderRadius: 12, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", display: "flex", alignItems: "center", justifyContent: "center", color: status.color }}>
-                        <status.icon size={24} />
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{campaign.businessName}</h3>
-                        <p style={{ fontSize: 13, color: "var(--vx-text-muted)", margin: "4px 0 0" }}>{campaign.name}</p>
-                      </div>
+          ) : (
+            campaigns.map(c => (
+              <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: 32, transition: "all 0.3s" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                      <h3 style={{ fontSize: 20, fontWeight: 800 }}>{c.name}</h3>
+                      <span style={{ padding: "4px 12px", borderRadius: 20, background: `${getStatusColor(c.status)}15`, border: `1px solid ${getStatusColor(c.status)}30`, color: getStatusColor(c.status), fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>{c.status.replace("_", " ")}</span>
                     </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "var(--vx-text-muted)", letterSpacing: "0.05em", marginBottom: 2 }}>Status</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: status.color }}>{status.label}</div>
-                      </div>
-                      <div style={{ width: 1, height: 30, background: "var(--vx-border)" }} />
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "var(--vx-text-muted)", letterSpacing: "0.05em", marginBottom: 2 }}>Budget</div>
-                        <div style={{ fontSize: 13, fontWeight: 700 }}>{campaign.budget}</div>
-                      </div>
+                    <div style={{ color: "#94a3b8", fontSize: 14, display: "flex", alignItems: "center", gap: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Calendar size={14} /> {new Date(c.dateSubmitted).toLocaleDateString()}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}><BarChart3 size={14} /> ID: {c.id.slice(-8)}</div>
                     </div>
                   </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, borderTop: "1px solid var(--vx-border)", paddingTop: 20 }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {campaign.platforms.map(p => (
-                        <div key={p} style={{ padding: "6px 12px", borderRadius: 8, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
-                          {getPlatformIcon(p)}
-                          <span style={{ textTransform: "capitalize" }}>{p}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{ display: "flex", gap: 12 }}>
-                      {campaign.status === "approved" && (
-                        <button
-                          onClick={() => navigate(`/dashboard/campaigns/${campaign.id}/analytics`)}
-                          style={{ padding: "8px 16px", borderRadius: 10, background: "#10b98115", color: "#10b981", border: "1px solid #10b98130", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
-                          onMouseEnter={e => e.currentTarget.style.background = "#10b98125"}
-                          onMouseLeave={e => e.currentTarget.style.background = "#10b98115"}
-                        >
-                          <BarChart3 size={16} /> View Performance
-                        </button>
-                      )}
-                      
-                      {campaign.status === "rejected" && (
-                        <button
-                          onClick={() => handleResubmit()}
-                          style={{ padding: "8px 16px", borderRadius: 10, background: "#f43f5e15", color: "#f43f5e", border: "1px solid #f43f5e30", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
-                          onMouseEnter={e => e.currentTarget.style.background = "#f43f5e25"}
-                          onMouseLeave={e => e.currentTarget.style.background = "#f43f5e15"}
-                        >
-                          <RefreshCw size={16} /> Resubmit Content
-                        </button>
-                      )}
-
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--vx-text-muted)", fontSize: 12, fontWeight: 500 }}>
-                        <Calendar size={14} />
-                        {new Date(campaign.dateSubmitted).toLocaleDateString()}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {c.platforms.map(p => (
+                      <div key={p} style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
+                        {getPlatformIcon(p)}
                       </div>
-                    </div>
+                    ))}
                   </div>
+                </div>
 
-                  {campaign.status === "rejected" && (
-                    <div style={{ marginTop: -4 }}>
-                      <button 
-                        onClick={() => toggleRejectionExpand(campaign.id)}
-                        style={{ background: "none", border: "none", color: "#f43f5e", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: 0 }}
-                      >
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />} 
-                        {isExpanded ? "Hide Details" : "Why was this rejected?"}
-                      </button>
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            style={{ overflow: "hidden" }}
-                          >
-                            <div style={{ marginTop: 12, padding: 16, borderRadius: 12, background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.1)", fontSize: 13, color: "var(--vx-text-secondary)", lineHeight: 1.5 }}>
-                              {campaign.rejectionReason || "Your content does not meet our current advertising guidelines. Please review the material and resubmit."}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 24, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 24 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", marginBottom: 8 }}>Budget</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{c.budget}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", marginBottom: 8 }}>Impressions</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{c.analytics?.impressions?.toLocaleString() || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", marginBottom: 8 }}>Reach</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{c.analytics?.reach?.toLocaleString() || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", textTransform: "uppercase", marginBottom: 8 }}>CTR</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#06d6c7" }}>{c.analytics?.ctr ? `${c.analytics.ctr}%` : "—"}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                    <button 
+                      onClick={() => navigate(`/analytics/${c.id}`)}
+                      style={{ padding: "10px 20px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      View Full Report <ArrowLeft size={14} style={{ transform: "rotate(180deg)" }} />
+                    </button>
+                  </div>
+                </div>
+
+                {c.status === "rejected" && (
+                  <div style={{ marginTop: 24, padding: 20, background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.1)", borderRadius: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, color: "#ef4444", fontWeight: 700 }}>
+                      <XCircle size={18} /> Rejection Notice
                     </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-
-        <footer style={{ marginTop: 80, textAlign: "center", borderTop: "1px solid var(--vx-border)", paddingTop: 40 }}>
-          <VulpinixLogo size="sm" />
-          <p style={{ color: "var(--vx-text-muted)", fontSize: 12, marginTop: 16, letterSpacing: "0.05em", fontWeight: 600 }}>
-            VULPINIX PLATFORM 1.0 — SECURE AD MANAGEMENT
-          </p>
-        </footer>
+                    <p style={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.6, marginBottom: 16 }}>{c.rejectionReason || "Your campaign does not meet our current advertising guidelines. Please review and resubmit."}</p>
+                    <button onClick={handleResubmit} style={{ padding: "8px 20px", borderRadius: 10, background: "#ef4444", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Review & Resubmit</button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
-

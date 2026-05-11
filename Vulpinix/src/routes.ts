@@ -17,6 +17,7 @@ import CampaignAnalyticsPage from "./pages/CampaignAnalyticsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CookiePage from "./pages/CookiePage";
 import NotFoundPage from "./pages/NotFoundPage";
+import OnboardingPage from "./pages/OnboardingPage";
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +39,10 @@ export const router = createBrowserRouter([
       {
         path: "signup",
         Component: AuthPage,
+      },
+      {
+        path: "onboarding",
+        Component: OnboardingPage,
       },
       {
         path: "upload",

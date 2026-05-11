@@ -79,9 +79,20 @@ export default function UploadPage() {
 
   // Auth guard
   useEffect(() => {
-    const userInfo = localStorage.getItem("userInfo");
+    const userInfoStr = localStorage.getItem("userInfo");
     const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (!userInfo && isAuthenticated !== "true") navigate("/auth", { replace: true });
+    if (!userInfoStr || isAuthenticated !== "true") {
+      navigate("/auth", { replace: true });
+    } else {
+      try {
+        const u = JSON.parse(userInfoStr);
+        if (!u.onboardingCompleted) {
+          navigate("/onboarding", { replace: true });
+        }
+      } catch (e) {
+        console.error("Auth guard error:", e);
+      }
+    }
   }, [navigate]);
 
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis>({

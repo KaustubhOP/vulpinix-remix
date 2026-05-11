@@ -9,8 +9,13 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     phone: { type: String, default: "" },
     company: { type: String, default: "" },
+    industry: { type: String, default: "" },
+    location: { type: String, default: "" },
+    website: { type: String, default: "" },
+    businessType: { type: String, default: "" },
     googleId: { type: String, default: "" },
     picture: { type: String, default: "" },
+    onboardingCompleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

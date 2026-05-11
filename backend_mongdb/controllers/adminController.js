@@ -220,14 +220,22 @@ const getAllUsers = async (req, res) => {
     const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 }).lean();
     const normalized = users.map((u) => ({
       id: u._id.toString(),
+      _id: u._id.toString(),
       name: u.name || "—",
       email: u.email || "—",
       phone: u.phone || "",
       company: u.company || "",
+      industry: u.industry || "",
+      location: u.location || "",
+      website: u.website || "",
+      businessType: u.businessType || "",
       role: u.role || "user",
       authProvider: u.googleId ? "google" : "email",
       googleId: u.googleId || "",
+      picture: u.picture || "",
+      onboardingCompleted: u.onboardingCompleted || false,
       joinedAt: u.createdAt,
+      createdAt: u.createdAt,
     }));
     return res.json({ success: true, users: normalized, total: normalized.length });
   } catch (err) {

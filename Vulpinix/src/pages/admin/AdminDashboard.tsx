@@ -4,33 +4,14 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
- 
   Search, 
   CheckCircle2, 
- 
   Eye, 
   LogOut, 
- 
   User, 
   Lock, 
- 
-
   Mail,
-
-
-
-
-
-
-
   X,
-
-
-
-
-
-
-
   ChevronRight,
   CreditCard,
   Target,
@@ -99,6 +80,10 @@ interface AdminUser {
   role?: string;
   authProvider?: string;
   phone?: string;
+  company?: string;
+  industry?: string;
+  location?: string;
+  onboardingCompleted?: boolean;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -521,6 +506,92 @@ function StatCard({ label, value, color, delay }: { label: string; value: number
 /* ─────────────────────────────────────────────────────────────────────────────
    MODAL COMPONENT
 ───────────────────────────────────────────────────────────────────────────── */
+function UserDetailModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+  return (
+    <motion.div 
+      className="vx-admin__modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div 
+        className="vx-admin__modal"
+        style={{ maxWidth: 520 }}
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="vx-admin__modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 16, background: user.authProvider === 'google' ? 'linear-gradient(135deg, #4285F4, #34A853)' : 'linear-gradient(135deg, #6366f1, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff' }}>
+              {user.name?.[0].toUpperCase() || 'U'}
+            </div>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: '#fff' }}>{user.name}</h2>
+              <p style={{ color: '#64748b', fontSize: 13 }}>{user.email}</p>
+            </div>
+          </div>
+          <button className="vx-admin__logout-btn" onClick={onClose} style={{ padding: 8, borderRadius: '50%' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="vx-admin__modal-body">
+          <div className="vx-admin__field-group">
+            <div>
+              <div className="vx-admin__label-sm">Company / Brand</div>
+              <div className="vx-admin__val-lg">{user.company || 'Not provided'}</div>
+            </div>
+            <div>
+              <div className="vx-admin__label-sm">Industry</div>
+              <div className="vx-admin__val-lg">{user.industry || 'Not provided'}</div>
+            </div>
+            <div>
+              <div className="vx-admin__label-sm">Phone</div>
+              <div className="vx-admin__val-lg">{user.phone || '—'}</div>
+            </div>
+            <div>
+              <div className="vx-admin__label-sm">Auth Provider</div>
+              <div className="vx-admin__val-lg" style={{ textTransform: 'capitalize' }}>{user.authProvider || 'Email'}</div>
+            </div>
+            <div>
+              <div className="vx-admin__label-sm">Location</div>
+              <div className="vx-admin__val-lg">{user.location || '—'}</div>
+            </div>
+            <div>
+              <div className="vx-admin__label-sm">Joined On</div>
+              <div className="vx-admin__val-lg">{user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' }) : '—'}</div>
+            </div>
+          </div>
+
+          <div className="vx-admin__label-sm">Platform Onboarding</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, marginTop: 8 }}>
+            {user.onboardingCompleted ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#4ade80' }}>
+                <CheckCircle2 size={18} />
+                <span style={{ fontSize: 14, fontWeight: 700 }}>Profile Fully Completed</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+                <Users size={18} />
+                <span style={{ fontSize: 14, fontWeight: 700 }}>Onboarding Pending</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="vx-admin__modal-footer">
+          <button className="vx-admin__tab-btn vx-admin__tab-btn--active" onClick={onClose} style={{ padding: '12px 32px', width: '100%', borderRadius: 16 }}>
+            Close Profile
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function DetailModal({ campaign, onClose, onApprove }: { campaign: Campaign; onClose: () => void; onApprove: (id: string) => void }) {
   const [activeTab, setActiveTab] = useState<'details' | 'creative' | 'payment'>('details');
 
@@ -698,6 +769,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -706,62 +778,62 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     const token = sessionStorage.getItem("adminToken");
+    if (!token) return;
     try {
       const [campRes, userRes] = await Promise.all([
         fetch(`${API_BASE}/api/admin/campaigns`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       const [campData, userData] = await Promise.all([campRes.json(), userRes.json()]);
-      
-      let finalCampaigns = [];
-      let finalUsers = [];
 
-      if (campData.success && Array.isArray(campData.campaigns)) finalCampaigns = campData.campaigns;
-      if (userData.success && Array.isArray(userData.users)) finalUsers = userData.users;
-
-      if (finalCampaigns.length === 0) {
+      if (campData.success && Array.isArray(campData.campaigns)) {
+        setCampaigns(campData.campaigns);
+      } else {
         const local = localStorage.getItem("userCampaigns");
-        if (local) finalCampaigns = JSON.parse(local);
+        if (local) { try { setCampaigns(JSON.parse(local)); } catch (_ignore) {} }
       }
 
-      if (finalCampaigns.length === 0) {
-        finalCampaigns = [
-          { id: '1', name: 'Summer Blast Ad', businessName: 'Cool Drinks Co', status: 'pending', budget: '$5,000', platforms: ['Instagram', 'Facebook'], userName: 'John Doe', userEmail: 'john@example.com', dateSubmitted: new Date().toISOString(), businessGoal: 'Increase brand awareness for our new summer line of tropical juices.' },
-          { id: '2', name: 'New Year Promo', businessName: 'Fashion Hub', status: 'approved', budget: '$12,000', platforms: ['YouTube', 'Twitter'], userName: 'Jane Smith', userEmail: 'jane@example.com', dateSubmitted: new Date().toISOString() }
-        ] as any;
+      if (userData.success && Array.isArray(userData.users)) {
+        setUsers(userData.users);
       }
-      
-      if (finalUsers.length === 0) {
-        finalUsers = [
-          { _id: 'u1', name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString(), role: 'user' },
-          { _id: 'u2', name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString(), role: 'user' },
-          { _id: 'u3', name: 'Robert Brown', email: 'robert@example.com', createdAt: new Date().toISOString(), role: 'user' }
-        ];
-      }
-
-      setCampaigns(finalCampaigns);
-      setUsers(finalUsers);
-    } catch {
+    } catch (err) {
+      console.error("Admin loadData error:", err);
       const local = localStorage.getItem("userCampaigns");
-      if (local) setCampaigns(JSON.parse(local));
-      setUsers([
-        { _id: 'u1', name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString(), role: 'user' },
-        { _id: 'u2', name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString(), role: 'user' }
-      ]);
+      if (local) { try { setCampaigns(JSON.parse(local)); } catch (_ignore) {} }
     }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!adminId || !adminPassword) { toast.error("Please enter credentials"); return; }
     setIsLoggingIn(true);
-    if (adminId === "admin" && adminPassword === "admin") {
-      sessionStorage.setItem("adminAuthenticated", "true");
-      setIsAuthenticated(true);
-      toast.success("Welcome back, Commander");
-    } else {
-      toast.error("Access denied");
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId, password: adminPassword }),
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        sessionStorage.setItem("adminAuthenticated", "true");
+        sessionStorage.setItem("adminToken", data.token);
+        setIsAuthenticated(true);
+        toast.success(`Welcome back, ${data.admin?.name || "Commander"}`);
+      } else {
+        toast.error(data.message || "Access denied");
+      }
+    } catch {
+      if (adminId === "admin" && adminPassword === "admin") {
+        sessionStorage.setItem("adminAuthenticated", "true");
+        sessionStorage.setItem("adminToken", "local-fallback");
+        setIsAuthenticated(true);
+        toast.success("Welcome back, Commander (offline mode)");
+      } else {
+        toast.error("Cannot reach server. Ensure the backend is running.");
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
-    setIsLoggingIn(false);
   };
 
   const handleLogout = () => {
@@ -771,10 +843,31 @@ export default function AdminDashboard() {
   };
 
   const updateStatus = async (id: string, status: CampaignStatus) => {
-    const updated = campaigns.map(c => c.id === id ? { ...c, status } : c);
-    setCampaigns(updated);
-    localStorage.setItem("userCampaigns", JSON.stringify(updated));
-    toast.success(`Campaign ${status}`);
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const res = await fetch(`${API_BASE}/api/admin/campaigns/${id}/status`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: data.campaign.status } : c));
+        toast.success(`Campaign ${status}`);
+      } else {
+        toast.error(data.message || "Failed to update status");
+      }
+    } catch (err) {
+      console.error("Update status error:", err);
+      // Fallback for local testing
+      const updated = campaigns.map(c => c.id === id ? { ...c, status } : c);
+      setCampaigns(updated);
+      localStorage.setItem("userCampaigns", JSON.stringify(updated));
+      toast.success(`Campaign ${status} (Local fallback)`);
+    }
   };
 
   if (!isAuthenticated) {
@@ -945,15 +1038,42 @@ export default function AdminDashboard() {
         ) : (
           <div style={{ animation: 'adFadeIn 0.5s ease both' }}>
             {filteredUsers.length > 0 ? filteredUsers.map((u, i) => (
-              <motion.div key={u._id || i} className="vx-admin__user-row" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
-                <div className="vx-admin__card-avatar" style={{ width: 44, height: 44, fontSize: 16, borderRadius: 12, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
+              <motion.div 
+                key={u._id || i} 
+                className="vx-admin__user-row" 
+                initial={{ opacity: 0, x: -20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                transition={{ delay: i * 0.03 }}
+                onClick={() => setSelectedUser(u)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="vx-admin__card-avatar" style={{ width: 44, height: 44, fontSize: 16, borderRadius: 12, background: u.authProvider === 'google' ? 'linear-gradient(135deg, #4285F4, #34A853)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
                   {u.name?.[0] || 'U'}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{u.name}</div>
-                  <div style={{ color: '#64748b', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {u.email}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{u.name}</div>
+                    <div style={{ 
+                      fontSize: 10, 
+                      fontWeight: 700, 
+                      padding: '2px 7px', 
+                      borderRadius: 20, 
+                      background: u.authProvider === 'google' ? 'rgba(66,133,244,0.15)' : 'rgba(124,58,237,0.15)', 
+                      color: u.authProvider === 'google' ? '#4285F4' : '#a78bfa', 
+                      border: `1px solid ${u.authProvider === 'google' ? 'rgba(66,133,244,0.3)' : 'rgba(124,58,237,0.3)'}` 
+                    }}>
+                      {u.authProvider === 'google' ? 'Google' : 'Email'}
+                    </div>
+                    {u.onboardingCompleted && <div style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>✓ Onboarded</div>}
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Mail size={11} /> {u.email}</span>
+                    {u.company && <span style={{ color: '#475569' }}>· 🏢 {u.company}</span>}
+                    {u.phone && <span style={{ color: '#475569' }}>· 📞 {u.phone}</span>}
+                    {u.industry && <span style={{ color: '#475569' }}>· {u.industry}</span>}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0 }}>
                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                      <div style={{ fontSize: 10, color: '#475569', fontWeight: 800, textTransform: 'uppercase' }}>Joined</div>
                      <div style={{ fontSize: 13, color: '#94a3b8' }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</div>
@@ -978,6 +1098,12 @@ export default function AdminDashboard() {
               campaign={selectedCampaign} 
               onClose={() => setSelectedCampaign(null)} 
               onApprove={id => updateStatus(id, 'approved')}
+            />
+          )}
+          {selectedUser && (
+            <UserDetailModal 
+              user={selectedUser} 
+              onClose={() => setSelectedUser(null)} 
             />
           )}
         </AnimatePresence>
