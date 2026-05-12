@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import {
-  User, Mail, Phone, MapPin, Building2, Edit2, Save, X, Clock,
+  User, Phone, MapPin, Building2, Edit2, Save, X, Clock,
   CheckCircle2, TrendingUp, Eye, MousePointer, DollarSign, Calendar,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Globe,
   Link as LinkIcon, Sparkles, AlertCircle, BarChart3, History, Camera, RefreshCw

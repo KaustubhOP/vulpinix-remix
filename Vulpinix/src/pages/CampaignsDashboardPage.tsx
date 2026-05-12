@@ -5,14 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Clock,
-  CheckCircle2,
   XCircle,
   BarChart3,
   Bell,
   X,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
   Calendar,
   Instagram,
   Facebook,
@@ -62,8 +58,6 @@ export default function CampaignsDashboardPage() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
-  const [expandedRejections, setExpandedRejections] = useState<Set<string>>(new Set());
-  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
 
   useEffect(() => {
     const userInfoStr = localStorage.getItem("userInfo");
@@ -97,7 +91,6 @@ export default function CampaignsDashboardPage() {
       return;
     }
 
-    setIsLoadingCampaigns(true);
     try {
       const response = await fetch(`${API_BASE}/api/campaign/my-campaigns`, {
         headers: { "Authorization": `Bearer ${authToken}` }
@@ -115,8 +108,6 @@ export default function CampaignsDashboardPage() {
           setCampaigns(Array.isArray(parsed) ? parsed : []);
         } catch {}
       }
-    } finally {
-      setIsLoadingCampaigns(false);
     }
   };
 
@@ -138,15 +129,6 @@ export default function CampaignsDashboardPage() {
       localStorage.setItem("adminNotifications", JSON.stringify(updated));
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch {}
-  };
-
-  const toggleRejectionExpand = (id: string) => {
-    setExpandedRejections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   };
 
   const handleResubmit = () => {
