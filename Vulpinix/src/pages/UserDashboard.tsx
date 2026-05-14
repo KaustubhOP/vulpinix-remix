@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import {
-  TrendingUp, BarChart3, Plus, Activity, PenSquare,
+  TrendingUp, BarChart3, Plus, Activity, PenSquare, Share2,
   Zap, Instagram, Facebook, Youtube, Twitter, Linkedin,
   Globe, Bell, ArrowRight, Sparkles, Target, Eye,
   MousePointer, DollarSign, CheckCircle2, XCircle
@@ -244,10 +244,10 @@ export default function UserDashboard() {
                 </div>
                 <div className="vxd-action-grid">
                   {[
-                    { label: "Upload Media", icon: <Plus size={16} color="#a78bfa" />, path: "/upload" },
-                    { label: "View Analytics", icon: <TrendingUp size={16} color="#38bdf8" />, path: "/dashboard/campaigns" },
-                    { label: "Manage Profile", icon: <Activity size={16} color="#22c55e" />, path: "/profile" },
-                    { label: "Billing & Plans", icon: <DollarSign size={16} color="#fbbf24" />, path: "/payment" },
+                    { label: "Create Post", icon: <PenSquare size={16} color="#a78bfa" />, path: "/create-post" },
+                    { label: "Upload Media", icon: <Plus size={16} color="#38bdf8" />, path: "/upload" },
+                    { label: "Social Accounts", icon: <Share2 size={16} color="#22c55e" />, path: "/social" },
+                    { label: "View Analytics", icon: <TrendingUp size={16} color="#fbbf24" />, path: "/dashboard/campaigns" },
                   ].map(a => (
                     <div key={a.label} className="vxd-action-item" onClick={() => navigate(a.path)}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>{a.icon}{a.label}</div>

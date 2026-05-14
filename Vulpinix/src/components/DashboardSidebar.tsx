@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, BarChart3, Upload, User,
   ChevronLeft, ChevronRight, LogOut,
-  Sparkles
+  Sparkles, Share2
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -115,10 +115,11 @@ const SB = `
 `;
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/dashboard" },
-  { label: "Upload Campaign", icon: <Upload size={18} />, path: "/upload" },
-  { label: "My Profile", icon: <User size={18} />, path: "/profile" },
-  { label: "My Analytics", icon: <BarChart3 size={18} />, path: "/dashboard/campaigns" },
+  { label: "Dashboard",       icon: <LayoutDashboard size={18} />, path: "/dashboard" },
+  { label: "Upload Campaign", icon: <Upload size={18} />,          path: "/upload" },
+  { label: "My Profile",      icon: <User size={18} />,            path: "/profile" },
+  { label: "My Analytics",    icon: <BarChart3 size={18} />,       path: "/dashboard/campaigns" },
+  { label: "Social Accounts", icon: <Share2 size={18} />,          path: "/social" },
 ];
 
 interface Props {

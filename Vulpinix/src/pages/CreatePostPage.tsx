@@ -5,9 +5,10 @@ import {
   Instagram, Facebook, Twitter, Linkedin, Youtube,
   Image as ImageIcon, Video, Smile, Hash, AtSign,
   Globe, Lock, Users, ChevronDown, Send, ArrowLeft,
-  X, Sparkles, Clock, CheckCircle2
+  X, Sparkles, Clock, CheckCircle2, AlertCircle, Share2
 } from "lucide-react";
 import { DashboardSidebar } from "../components/DashboardSidebar";
+import { getLinkedAccounts } from "./SocialAccountsPage";
 
 const PLATFORMS = [
   { id: "instagram", label: "Instagram", icon: <Instagram size={16} />, color: "#E1306C" },
@@ -104,6 +105,8 @@ export default function CreatePostPage() {
   const [posting, setPosting] = useState(false);
   const [posted, setPosted] = useState(false);
 
+  const [linkedAccounts, setLinkedAccounts] = useState<string[]>([]);
+
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") {
       navigate("/auth", { replace: true }); return;
@@ -112,6 +115,7 @@ export default function CreatePostPage() {
       const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
       if (u.name) setUserName(u.name.split(" ")[0]);
     } catch {}
+    setLinkedAccounts(getLinkedAccounts());
   }, [navigate]);
 
   const togglePlatform = (id: string) => {
@@ -163,14 +167,30 @@ export default function CreatePostPage() {
               <div className="vxcp-sub">Share a single post directly from your account, {userName}.</div>
             </motion.div>
 
-            <div className="vxcp-grid">
-              {/* LEFT: Compose */}
-              <div>
+            {linkedAccounts.length === 0 ? (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", padding: "80px 40px", background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24 }}>
+                <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                  <Lock size={32} color="#eab308" />
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>No Social Accounts Linked</div>
+                <div style={{ color: "var(--vx-text-muted)", fontSize: 15, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
+                  You need to connect at least one social media account before you can create and publish posts.
+                </div>
+                <button
+                  onClick={() => navigate("/social")}
+                  style={{ padding: "14px 28px", background: "linear-gradient(135deg,#a78bfa,#38bdf8)", border: "none", borderRadius: 14, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}
+                >
+                  <Share2 size={16} /> Connect Social Accounts
+                </button>
+              </motion.div>
+            ) : (
+              <div className="vxcp-grid">
+                <div>
                 {/* Platform selector */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="vxcp-card">
-                  <div className="vxcp-card-title">Post to</div>
+                  <div className="vxcp-card-title">Post to <span style={{color:"#22c55e",fontSize:11}}> ({linkedAccounts.length} connected)</span></div>
                   <div className="vxcp-platform-grid">
-                    {PLATFORMS.map(p => (
+                    {PLATFORMS.filter(p => linkedAccounts.includes(p.id)).map(p => (
                       <button
                         key={p.id}
                         className={`vxcp-platform-btn ${selectedPlatforms.includes(p.id) ? "selected" : ""}`}
@@ -302,6 +322,7 @@ export default function CreatePostPage() {
                 </motion.div>
               </div>
             </div>
+            )}
           </div>
         </div>
 
