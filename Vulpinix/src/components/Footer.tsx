@@ -528,7 +528,7 @@ export function Footer() {
         </div>{/* end inner */}
 
         {/* ── Divider ── */}
-        <div className="vx-footer__divider" />
+        {/* ── Divider removed ── */}
 
         {/* ── Bottom bar ── */}
         <div className="vx-footer__bottom">
