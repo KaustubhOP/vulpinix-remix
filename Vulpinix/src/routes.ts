@@ -18,6 +18,7 @@ import CampaignAnalyticsPage from "./pages/CampaignAnalyticsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CookiePage from "./pages/CookiePage";
 import NotFoundPage from "./pages/NotFoundPage";
+import CreatePostPage from "./pages/CreatePostPage";
 import OnboardingPage from "./pages/OnboardingPage";
 
 export const router = createBrowserRouter([
@@ -92,6 +93,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard",
         Component: UserDashboard,
+      },
+      {
+        path: "create-post",
+        Component: CreatePostPage,
       },
       {
         path: "dashboard/campaigns",

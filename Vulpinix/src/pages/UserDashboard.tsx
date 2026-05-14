@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import {
-  TrendingUp, BarChart3, Plus, Activity,
+  TrendingUp, BarChart3, Plus, Activity, PenSquare,
   Zap, Instagram, Facebook, Youtube, Twitter, Linkedin,
   Globe, Bell, ArrowRight, Sparkles, Target, Eye,
   MousePointer, DollarSign, CheckCircle2, XCircle
@@ -160,6 +160,9 @@ export default function UserDashboard() {
               <div className="vxd-sub">Here's your campaign command centre — everything in one place.</div>
             </div>
             <div className="vxd-header-actions">
+              <button className="vxd-btn-ghost" onClick={() => navigate("/create-post")}>
+                <PenSquare size={16} /> Create Post
+              </button>
               <button className="vxd-btn-primary" onClick={() => navigate("/upload")}><Plus size={16} /> New Campaign</button>
             </div>
           </motion.div>
