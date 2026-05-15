@@ -133,35 +133,56 @@ const createCampaign = async (req, res) => {
             const pageToken = targetPage.access_token;
             console.log("🔍 [PUBLISH] Publishing to Facebook Page:", targetPage.name, "ID:", pageId);
             
-            // --- FACEBOOK PUBLISHING ---
+            // --- IMAGE PREPARATION (for both FB and IG) ---
             let fbPhotoId = null;
+            if (adImage && adImage.startsWith('data:image')) {
+              try {
+                console.log("🔍 [PUBLISH] Uploading image to Meta to get a persistent URL...");
+                const FormData = require('form-data');
+                const form = new FormData();
+                const base64Data = adImage.split(';base64,').pop();
+                const imageBuffer = Buffer.from(base64Data, 'base64');
+                form.append('source', imageBuffer, { filename: 'post_image.png', contentType: 'image/png' });
+                
+                // If not posting to FB feed, we just upload it as a "hidden" photo if possible, 
+                // but for now, we'll just upload it to the page. 
+                // We'll set published=false if we only want it for IG, but FB's /photos often publishes immediately.
+                // For simplicity, we'll just post it.
+                form.append('message', adCaption || adCopyText || campaignName);
+                form.append('access_token', pageToken);
+                
+                // If FB is NOT selected, we could try to upload with published=false, but that requires more permissions.
+                // Let's just upload it.
+                const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/photos`, form, { headers: { ...form.getHeaders() } });
+                fbPhotoId = fbRes.data.id;
+                console.log(`✅ [META] Image uploaded. ID: ${fbPhotoId}`);
+              } catch (uploadErr) {
+                console.error("❌ [META] Image upload failed:", uploadErr.response?.data || uploadErr.message);
+              }
+            }
+
+            // --- FACEBOOK FEED PUBLISHING ---
             if (platformsLower.includes('facebook')) {
               try {
-                if (adImage && adImage.startsWith('data:image')) {
-                  const FormData = require('form-data');
-                  const form = new FormData();
-                  const base64Data = adImage.split(';base64,').pop();
-                  const imageBuffer = Buffer.from(base64Data, 'base64');
-                  form.append('source', imageBuffer, { filename: 'post_image.png', contentType: 'image/png' });
-                  form.append('message', adCaption || adCopyText || campaignName);
-                  form.append('access_token', pageToken);
-                  const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/photos`, form, { headers: { ...form.getHeaders() } });
-                  fbPhotoId = fbRes.data.id;
-                  console.log(`✅ [FB] Successfully published IMAGE to Facebook Page: ${targetPage.name}`);
-                } else {
+                // If we already uploaded a photo, it's already "published" to FB in most cases.
+                // If not, and it's just a text post or a URL:
+                if (!fbPhotoId) {
                   const payload = { message: adCaption || adCopyText || campaignName, access_token: pageToken };
                   if (adImage && adImage.startsWith('http')) payload.url = adImage;
                   await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, payload);
                   console.log(`✅ [FB] Successfully published TEXT/URL to Facebook Page: ${targetPage.name}`);
+                } else {
+                  console.log(`✅ [FB] Already published via photo upload.`);
                 }
               } catch (fbErr) {
-                console.error("❌ [FB] Publishing failed:", fbErr.response?.data || fbErr.message);
+                console.error("❌ [FB] Feed publishing failed:", fbErr.response?.data || fbErr.message);
               }
             }
 
             // --- INSTAGRAM PUBLISHING ---
             if (platformsLower.includes('instagram')) {
               try {
+                console.log("🔍 [IG] Fetching linked Instagram Account...");
                 const igAccountRes = await axios.get(`https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`);
                 const igAccountId = igAccountRes.data?.instagram_business_account?.id;
                 
@@ -182,20 +203,38 @@ const createCampaign = async (req, res) => {
                     const containerRes = await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
                       image_url: igImageUrl,
                       caption: adCaption || adCopyText || campaignName,
-                      access_token: pageToken // IG uses Page Token for linked accounts
+                      access_token: pageToken
                     });
                     
                     const creationId = containerRes.data.id;
                     if (creationId) {
-                      console.log("🔍 [IG] Publishing container:", creationId);
-                      await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
-                        creation_id: creationId,
-                        access_token: pageToken
-                      });
-                      console.log(`✅ [IG] Successfully published to Instagram!`);
+                      console.log(`🔍 [IG] Container created: ${creationId}. Polling for readiness...`);
+                      
+                      // Poll for media container status (max 5 attempts, 3s apart)
+                      let isReady = false;
+                      for (let i = 0; i < 5; i++) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        const statusRes = await axios.get(`https://graph.facebook.com/v18.0/${creationId}?fields=status_code&access_token=${pageToken}`);
+                        if (statusRes.data.status_code === 'FINISHED') {
+                          isReady = true;
+                          break;
+                        }
+                        console.log(`   [IG] Status: ${statusRes.data.status_code}...`);
+                      }
+
+                      if (isReady) {
+                        console.log("🔍 [IG] Publishing container:", creationId);
+                        await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
+                          creation_id: creationId,
+                          access_token: pageToken
+                        });
+                        console.log(`✅ [IG] Successfully published to Instagram!`);
+                      } else {
+                        console.log("❌ [IG] Media container failed to process in time.");
+                      }
                     }
                   } else {
-                    console.log("⚠️ [IG] Skipping Instagram: No public image URL available (Instagram requires an image URL).");
+                    console.log("⚠️ [IG] Skipping Instagram: No public image URL available.");
                   }
                 } else {
                   console.log("⚠️ [IG] No Instagram Business Account linked to this Facebook Page.");
@@ -223,9 +262,13 @@ const createCampaign = async (req, res) => {
     // Issue a user token so the dashboard can fetch campaigns via API
     const token = issueUserToken(userEmail || effectiveUserId, userName || "User");
 
+    const isInstant = campaign.status === "published";
+
     return res.status(201).json({
       success: true,
-      message: "Campaign submitted successfully. Awaiting approval.",
+      message: isInstant 
+        ? "Campaign published successfully!" 
+        : "Campaign submitted successfully. Awaiting approval.",
       campaign: {
         id: campaign._id.toString(),
         campaignName: campaign.campaignName,

@@ -69,7 +69,7 @@ exports.handleCallback = async (req, res) => {
       const fbAppId = process.env.FACEBOOK_APP_ID;
       const fbAppSecret = process.env.FACEBOOK_APP_SECRET;
 
-      // Exchange code for access token
+      // 1. Exchange code for user access token
       const tokenResponse = await axios.get(`https://graph.facebook.com/v18.0/oauth/access_token`, {
         params: {
           client_id: fbAppId,
@@ -80,9 +80,51 @@ exports.handleCallback = async (req, res) => {
       });
       
       const accessToken = tokenResponse.data.access_token;
-      console.log(`Successfully fetched access token for ${platform}!`);
+      console.log(`Successfully fetched user access token for ${platform}!`);
 
-      // If we have a userId, save it. If not, fallback to shubhamchavan@live.com
+      // 2. Fetch Pages and potential Instagram accounts
+      let fbPageId = "";
+      let fbPageToken = "";
+      let igAccountId = "";
+      let igUsername = "";
+
+      try {
+        const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`);
+        let pages = pagesRes.data.data || [];
+
+        // Fallback for specific Page ID if list is empty (common in dev/restricted apps)
+        if (pages.length === 0) {
+          try {
+            const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${accessToken}`);
+            if (forceRes.data && forceRes.data.access_token) pages = [forceRes.data];
+          } catch (e) {}
+        }
+
+        if (pages.length > 0) {
+          // We'll take the first page that has a linked Instagram account, or just the first page
+          let selectedPage = pages[0];
+          
+          for (const p of pages) {
+            const igRes = await axios.get(`https://graph.facebook.com/v18.0/${p.id}?fields=instagram_business_account&access_token=${p.access_token || accessToken}`);
+            if (igRes.data?.instagram_business_account) {
+              selectedPage = p;
+              igAccountId = igRes.data.instagram_business_account.id;
+              
+              // Get IG username
+              const igDetails = await axios.get(`https://graph.facebook.com/v18.0/${igAccountId}?fields=username&access_token=${p.access_token || accessToken}`);
+              igUsername = igDetails.data.username;
+              break;
+            }
+          }
+          
+          fbPageId = selectedPage.id;
+          fbPageToken = selectedPage.access_token;
+        }
+      } catch (metaErr) {
+        console.error("Error fetching Meta account details:", metaErr.response?.data || metaErr.message);
+      }
+
+      // 3. Save to User Model
       let targetUser = null;
       if (userId) {
         if (userId.includes('@')) {
@@ -98,20 +140,22 @@ exports.handleCallback = async (req, res) => {
       if (targetUser) {
         if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
         
+        // Update Facebook details
         targetUser.socialAccounts.facebook = {
           accessToken: accessToken,
-          pageId: "", // Will be filled later
-          pageAccessToken: ""
+          pageId: fbPageId,
+          pageAccessToken: fbPageToken
         };
         
-        // Also save it under instagram since they share the same token
+        // Update Instagram details
         targetUser.socialAccounts.instagram = {
           accessToken: accessToken,
-          igAccountId: ""
+          igAccountId: igAccountId,
+          username: igUsername // We might need to add this to the schema or just use it in the frontend
         };
         
         await targetUser.save();
-        console.log(`Saved Meta tokens to user: ${targetUser.email}`);
+        console.log(`Saved Meta tokens & IDs to user: ${targetUser.email}. IG: ${igUsername || 'N/A'}`);
       }
     }
 
@@ -119,5 +163,37 @@ exports.handleCallback = async (req, res) => {
   } catch (err) {
     console.error(`Error handling ${platform} callback:`, err.response?.data || err.message);
     res.redirect(`http://localhost:3000/social?error=auth_failed`);
+  }
+};
+
+exports.getSocialAccounts = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.query.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const socialStatus = {
+      facebook: !!user.socialAccounts?.facebook?.accessToken,
+      instagram: !!user.socialAccounts?.instagram?.igAccountId,
+      twitter: !!user.socialAccounts?.twitter?.accessToken,
+      linkedin: !!user.socialAccounts?.linkedin?.accessToken,
+      handles: {
+        facebook: user.socialAccounts?.facebook?.pageId ? "Connected Page" : null,
+        instagram: user.socialAccounts?.instagram?.username ? `@${user.socialAccounts.instagram.username}` : null,
+      }
+    };
+
+    res.json({ success: true, socialStatus });
+  } catch (err) {
+    console.error("Error fetching social accounts:", err);
+    res.status(500).json({ error: "Server error" });
   }
 };

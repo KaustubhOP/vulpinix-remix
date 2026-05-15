@@ -151,38 +151,48 @@ export default function SocialAccountsPage() {
 
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") { navigate("/auth", { replace: true }); return; }
-    try { const u = JSON.parse(localStorage.getItem("userInfo") || "{}"); if (u.name) setUserName(u.name.split(" ")[0]); } catch {}
-    
+    const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    if (u.name) setUserName(u.name.split(" ")[0]);
+    const userId = u.id || u._id || "";
+
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/social/status?userId=${userId}`);
+        const data = await res.json();
+        if (data.success) {
+          const nextLinked: string[] = [];
+          if (data.socialStatus.facebook) nextLinked.push("facebook");
+          if (data.socialStatus.instagram) nextLinked.push("instagram");
+          if (data.socialStatus.twitter) nextLinked.push("twitter");
+          if (data.socialStatus.linkedin) nextLinked.push("linkedin");
+          
+          setLinked(nextLinked);
+          setLinkedAccounts(nextLinked);
+          
+          const nextHandles: Record<string, string> = {};
+          if (data.socialStatus.handles.facebook) nextHandles.facebook = data.socialStatus.handles.facebook;
+          if (data.socialStatus.handles.instagram) nextHandles.instagram = data.socialStatus.handles.instagram;
+          
+          setHandles(nextHandles);
+          localStorage.setItem("socialHandles", JSON.stringify(nextHandles));
+        }
+      } catch (err) {
+        console.error("Error fetching social status:", err);
+      }
+    };
+
     // Check for OAuth callback params
     const params = new URLSearchParams(window.location.search);
     const success = params.get("success");
     const platform = params.get("platform");
     const error = params.get("error");
     
-    const currentLinked = getLinkedAccounts();
-    const currentHandles = JSON.parse(localStorage.getItem("socialHandles") || "{}");
-    
-    if (success === "true" && platform) {
-      if (!currentLinked.includes(platform)) {
-        const nextLinked = [...currentLinked, platform];
-        setLinked(nextLinked);
-        setLinkedAccounts(nextLinked);
-        
-        currentHandles[platform] = "Connected User"; // In a real app, this comes from the DB
-        setHandles(currentHandles);
-        localStorage.setItem("socialHandles", JSON.stringify(currentHandles));
-      }
-      
-      // Clean up URL
+    if (success === "true" || error) {
+      if (error) alert(`Connection failed: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (error) {
-      alert(`Connection failed: ${error}`);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setLinked(currentLinked);
-      setHandles(currentHandles);
+      fetchStatus();
     } else {
-      setLinked(currentLinked);
-      setHandles(currentHandles);
+      fetchStatus();
     }
   }, [navigate]);
 
