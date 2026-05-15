@@ -140,22 +140,26 @@ exports.handleCallback = async (req, res) => {
       if (targetUser) {
         if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
         
-        // Update Facebook details
+        // Always update Facebook details (Meta tokens are shared)
         targetUser.socialAccounts.facebook = {
           accessToken: accessToken,
           pageId: fbPageId,
           pageAccessToken: fbPageToken
         };
         
-        // Update Instagram details
-        targetUser.socialAccounts.instagram = {
-          accessToken: accessToken,
-          igAccountId: igAccountId,
-          username: igUsername // We might need to add this to the schema or just use it in the frontend
-        };
+        // ONLY update Instagram details if the user specifically chose to connect Instagram
+        if (platform === 'instagram' && igAccountId) {
+          targetUser.socialAccounts.instagram = {
+            accessToken: accessToken,
+            igAccountId: igAccountId,
+            username: igUsername
+          };
+          console.log(`✅ Linked Instagram for user: ${targetUser.email}`);
+        } else {
+          console.log(`✅ Linked Facebook for user: ${targetUser.email} (IG skipped per request)`);
+        }
         
         await targetUser.save();
-        console.log(`Saved Meta tokens & IDs to user: ${targetUser.email}. IG: ${igUsername || 'N/A'}`);
       }
     }
 
@@ -194,6 +198,34 @@ exports.getSocialAccounts = async (req, res) => {
     res.json({ success: true, socialStatus });
   } catch (err) {
     console.error("Error fetching social accounts:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};exports.disconnectSocialAccount = async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const userId = req.user?.id || req.query.userId;
+    
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    let user = null;
+    if (userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (user.socialAccounts && user.socialAccounts[platform]) {
+      user.socialAccounts[platform] = undefined;
+      // If disconnecting Meta platforms, maybe clear both? 
+      // For now, let's just clear the one requested.
+      await user.save();
+    }
+
+    res.json({ success: true, message: `${platform} disconnected` });
+  } catch (err) {
+    console.error("Error disconnecting account:", err);
     res.status(500).json({ error: "Server error" });
   }
 };

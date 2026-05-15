@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { authorizePlatform, handleCallback, getSocialAccounts } = require('../controllers/socialController');
+const { authorizePlatform, handleCallback, getSocialAccounts, disconnectSocialAccount } = require('../controllers/socialController');
 
 // @route   GET /api/social/status
 // @desc    Gets the status of connected social accounts
 // @access  Public (should eventually be protected)
 router.get('/status', getSocialAccounts);
+
+// @route   DELETE /api/social/:platform
+// @desc    Disconnects a social account
+// @access  Public (should eventually be protected)
+router.delete('/:platform', disconnectSocialAccount);
 
 // @route   GET /api/social/auth/:platform
 // @desc    Redirects user to the social platform's OAuth login page

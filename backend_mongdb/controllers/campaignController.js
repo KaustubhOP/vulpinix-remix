@@ -133,73 +133,68 @@ const createCampaign = async (req, res) => {
             const pageToken = targetPage.access_token;
             console.log("🔍 [PUBLISH] Publishing to Facebook Page:", targetPage.name, "ID:", pageId);
             
-            // --- IMAGE PREPARATION (for both FB and IG) ---
+            // --- IMAGE PREPARATION & FACEBOOK PUBLISHING ---
             let fbPhotoId = null;
             if (adImage && adImage.startsWith('data:image')) {
               try {
-                console.log("🔍 [PUBLISH] Uploading image to Meta to get a persistent URL...");
+                const isFacebookSelected = platformsLower.includes('facebook');
+                const isInstagramSelected = platformsLower.includes('instagram');
+                console.log(`DEBUG: platformsLower = ${JSON.stringify(platformsLower)}`);
+                console.log(`DEBUG: isFacebookSelected = ${isFacebookSelected}, isInstagramSelected = ${isInstagramSelected}`);
+                
                 const FormData = require('form-data');
                 const form = new FormData();
                 const base64Data = adImage.split(';base64,').pop();
                 const imageBuffer = Buffer.from(base64Data, 'base64');
                 form.append('source', imageBuffer, { filename: 'post_image.png', contentType: 'image/png' });
                 
-                // If not posting to FB feed, we just upload it as a "hidden" photo if possible, 
-                // but for now, we'll just upload it to the page. 
-                // We'll set published=false if we only want it for IG, but FB's /photos often publishes immediately.
-                // For simplicity, we'll just post it.
                 form.append('message', adCaption || adCopyText || campaignName);
                 form.append('access_token', pageToken);
+
+                // If Facebook is selected, we publish. If NOT, we keep it unpublished.
+                if (!isFacebookSelected) {
+                  form.append('published', 'false');
+                  console.log("🔍 [PUBLISH] FB not selected. Uploading as UNPUBLISHED for IG bridge.");
+                } else {
+                  console.log("🔍 [PUBLISH] FB selected. Publishing photo to Page feed.");
+                }
                 
-                // If FB is NOT selected, we could try to upload with published=false, but that requires more permissions.
-                // Let's just upload it.
                 const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/photos`, form, { headers: { ...form.getHeaders() } });
                 fbPhotoId = fbRes.data.id;
-                console.log(`✅ [META] Image uploaded. ID: ${fbPhotoId}`);
+                console.log(`✅ [META] Photo ID created: ${fbPhotoId}`);
               } catch (uploadErr) {
-                console.error("❌ [META] Image upload failed:", uploadErr.response?.data || uploadErr.message);
+                console.error("❌ [META] Upload failed:", uploadErr.response?.data || uploadErr.message);
               }
             }
 
-            // --- FACEBOOK FEED PUBLISHING ---
-            if (platformsLower.includes('facebook')) {
-              try {
-                // If we already uploaded a photo, it's already "published" to FB in most cases.
-                // If not, and it's just a text post or a URL:
-                if (!fbPhotoId) {
+            // --- FACEBOOK FALLBACK ---
+            if (platformsLower.includes('facebook') && !fbPhotoId) {
+                console.log("🔍 [PUBLISH] FB selected but no photo ID. Sending as feed post.");
+                try {
                   const payload = { message: adCaption || adCopyText || campaignName, access_token: pageToken };
                   if (adImage && adImage.startsWith('http')) payload.url = adImage;
                   await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, payload);
-                  console.log(`✅ [FB] Successfully published TEXT/URL to Facebook Page: ${targetPage.name}`);
-                } else {
-                  console.log(`✅ [FB] Already published via photo upload.`);
+                  console.log("✅ [FB] Feed post success.");
+                } catch (err) {
+                  console.error("❌ [FB] Feed post failed:", err.response?.data || err.message);
                 }
-              } catch (fbErr) {
-                console.error("❌ [FB] Feed publishing failed:", fbErr.response?.data || fbErr.message);
-              }
             }
 
-            // --- INSTAGRAM PUBLISHING ---
+            // --- INSTAGRAM PUBLISHING (STRICT GUARD) ---
             if (platformsLower.includes('instagram')) {
+              console.log("🔍 [PUBLISH] Instagram selected. Starting IG flow...");
               try {
-                console.log("🔍 [IG] Fetching linked Instagram Account...");
                 const igAccountRes = await axios.get(`https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`);
                 const igAccountId = igAccountRes.data?.instagram_business_account?.id;
                 
                 if (igAccountId) {
-                  console.log("🔍 [IG] Found linked Instagram Account ID:", igAccountId);
-                  
                   let igImageUrl = adImage && adImage.startsWith('http') ? adImage : null;
-                  
-                  // Bridge: If we have an FB photo ID, get its public source URL for Instagram
                   if (!igImageUrl && fbPhotoId) {
                     const photoDetail = await axios.get(`https://graph.facebook.com/v18.0/${fbPhotoId}?fields=images&access_token=${pageToken}`);
                     igImageUrl = photoDetail.data.images[0]?.source;
-                    console.log("🔍 [IG] Bridged image URL from Facebook:", !!igImageUrl);
                   }
 
                   if (igImageUrl) {
-                    console.log("🔍 [IG] Creating media container...");
                     const containerRes = await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
                       image_url: igImageUrl,
                       caption: adCaption || adCopyText || campaignName,
@@ -208,40 +203,27 @@ const createCampaign = async (req, res) => {
                     
                     const creationId = containerRes.data.id;
                     if (creationId) {
-                      console.log(`🔍 [IG] Container created: ${creationId}. Polling for readiness...`);
-                      
-                      // Poll for media container status (max 5 attempts, 3s apart)
                       let isReady = false;
                       for (let i = 0; i < 5; i++) {
                         await new Promise(r => setTimeout(r, 3000));
                         const statusRes = await axios.get(`https://graph.facebook.com/v18.0/${creationId}?fields=status_code&access_token=${pageToken}`);
-                        if (statusRes.data.status_code === 'FINISHED') {
-                          isReady = true;
-                          break;
-                        }
-                        console.log(`   [IG] Status: ${statusRes.data.status_code}...`);
+                        if (statusRes.data.status_code === 'FINISHED') { isReady = true; break; }
                       }
-
                       if (isReady) {
-                        console.log("🔍 [IG] Publishing container:", creationId);
                         await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
                           creation_id: creationId,
                           access_token: pageToken
                         });
-                        console.log(`✅ [IG] Successfully published to Instagram!`);
-                      } else {
-                        console.log("❌ [IG] Media container failed to process in time.");
+                        console.log("✅ [IG] Success.");
                       }
                     }
-                  } else {
-                    console.log("⚠️ [IG] Skipping Instagram: No public image URL available.");
                   }
-                } else {
-                  console.log("⚠️ [IG] No Instagram Business Account linked to this Facebook Page.");
                 }
               } catch (igErr) {
-                console.error("❌ [IG] Publishing failed:", igErr.response?.data || igErr.message);
+                console.error("❌ [IG] Failed:", igErr.response?.data || igErr.message);
               }
+            } else {
+              console.log("🔍 [PUBLISH] Instagram NOT selected. Skipping IG flow completely.");
             }
 
             campaign.status = "published";

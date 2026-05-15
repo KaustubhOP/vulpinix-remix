@@ -196,19 +196,31 @@ export default function SocialAccountsPage() {
     }
   }, [navigate]);
 
-  const handleToggle = (platformId: string) => {
+  const handleToggle = async (platformId: string) => {
+    const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    const userId = u.id || u._id || "";
+
     if (linked.includes(platformId)) {
-      // Disconnect
-      const next = linked.filter(id => id !== platformId);
-      setLinked(next); setLinkedAccounts(next);
-      const nextHandles = { ...handles };
-      delete nextHandles[platformId];
-      setHandles(nextHandles);
-      localStorage.setItem("socialHandles", JSON.stringify(nextHandles));
+      // Disconnect via API
+      try {
+        const res = await fetch(`http://localhost:5000/api/social/${platformId}?userId=${userId}`, {
+          method: "DELETE"
+        });
+        const data = await res.json();
+        if (data.success) {
+          const next = linked.filter(id => id !== platformId);
+          setLinked(next); 
+          setLinkedAccounts(next);
+          const nextHandles = { ...handles };
+          delete nextHandles[platformId];
+          setHandles(nextHandles);
+          localStorage.setItem("socialHandles", JSON.stringify(nextHandles));
+        }
+      } catch (err) {
+        console.error("Disconnect error:", err);
+      }
     } else {
       // Connect - Redirect to the backend which will redirect to the platform's OAuth page
-      const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      const userId = u.id || u._id || "";
       window.location.href = `http://localhost:5000/api/social/auth/${platformId}?userId=${userId}`;
     }
   };

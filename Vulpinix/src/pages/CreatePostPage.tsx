@@ -151,7 +151,11 @@ export default function CreatePostPage() {
 
       const authToken = localStorage.getItem("authToken");
 
-      // Call the exact same endpoint that Upload Campaign uses
+      console.log("🚀 SENDING CAMPAIGN:", {
+        platforms: selectedPlatforms,
+        caption: caption.substring(0, 20) + "..."
+      });
+
       const response = await fetch(`${API_BASE}/api/campaign/create`, {
         method: "POST",
         headers: {
