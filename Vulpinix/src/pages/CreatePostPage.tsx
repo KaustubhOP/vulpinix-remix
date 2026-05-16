@@ -97,7 +97,7 @@ export default function CreatePostPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [userName, setUserName] = useState("there");
   const [caption, setCaption] = useState("");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["instagram"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [privacy, setPrivacy] = useState("public");
   const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<string[]>([]);
@@ -116,7 +116,10 @@ export default function CreatePostPage() {
       const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
       if (u.name) setUserName(u.name.split(" ")[0]);
     } catch {}
-    setLinkedAccounts(getLinkedAccounts());
+    const accounts = getLinkedAccounts();
+    setLinkedAccounts(accounts);
+    // Auto-select only the platforms the user has actually connected
+    setSelectedPlatforms(accounts.filter(id => PLATFORMS.some(p => p.id === id)));
   }, [navigate]);
 
   const togglePlatform = (id: string) => {
@@ -246,9 +249,15 @@ export default function CreatePostPage() {
                       >
                         <span style={{ color: selectedPlatforms.includes(p.id) ? p.color : "inherit" }}>{p.icon}</span>
                         {p.label}
+                        {selectedPlatforms.includes(p.id) && <span style={{ fontSize: 10, color: p.color, marginLeft: 2 }}>✓</span>}
                       </button>
                     ))}
                   </div>
+                  {selectedPlatforms.length === 0 && (
+                    <div style={{ marginTop: 12, fontSize: 12, color: "#eab308", display: "flex", alignItems: "center", gap: 6 }}>
+                      ⚠️ Select at least one platform to publish to.
+                    </div>
+                  )}
                 </motion.div>
 
                 {/* Caption */}
@@ -357,6 +366,7 @@ export default function CreatePostPage() {
                     className="vxcp-btn-primary"
                     onClick={handlePost}
                     disabled={posting || !caption.trim() || selectedPlatforms.length === 0}
+                    title={selectedPlatforms.length === 0 ? "Select at least one platform" : ""}
                   >
                     {posting ? (
                       <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} /> Posting…</>

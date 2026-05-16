@@ -94,145 +94,194 @@ const createCampaign = async (req, res) => {
       const platformsLower = platforms ? platforms.map(p => p.toLowerCase()) : [];
       console.log("🔍 [PUBLISH] Platforms received:", platforms, "→ lowercased:", platformsLower);
 
-      if (platformsLower.includes('facebook') || platformsLower.includes('instagram')) {
+      const isFacebookSelected = platformsLower.includes('facebook');
+      const isInstagramSelected = platformsLower.includes('instagram');
+
+      if (isFacebookSelected || isInstagramSelected) {
         const User = require("../models/user");
         const axios = require("axios");
-        
-        // Grab the token from the user who submitted the campaign
+
+        // --- STEP 1: Upload image to ImgBB to get a real public URL ---
+        // Instagram's API REQUIRES a publicly accessible URL — base64 & FB CDN won't work.
+        let publicImageUrl = null;
+        if (adImage && adImage.startsWith('data:image')) {
+          console.log("🔍 [IMGBB] Uploading image to get public URL for Instagram...");
+          try {
+            const FormData = require('form-data');
+            const imgbbForm = new FormData();
+            const base64Data = adImage.split(';base64,').pop();
+            imgbbForm.append('image', base64Data);
+            const imgbbKey = process.env.IMGBB_API_KEY;
+            if (!imgbbKey) throw new Error('IMGBB_API_KEY not set in .env');
+            const imgbbRes = await axios.post(
+              `https://api.imgbb.com/1/upload?key=${imgbbKey}`,
+              imgbbForm,
+              { headers: imgbbForm.getHeaders() }
+            );
+            publicImageUrl = imgbbRes.data?.data?.url;
+            console.log("✅ [IMGBB] Public image URL:", publicImageUrl);
+          } catch (imgbbErr) {
+            console.error("❌ [IMGBB] Upload failed:", imgbbErr.response?.data || imgbbErr.message);
+          }
+        } else if (adImage && adImage.startsWith('http')) {
+          // Already a public URL
+          publicImageUrl = adImage;
+          console.log("🔍 [PUBLISH] Image is already a public URL.");
+        }
+
+        // --- STEP 2: Load user & tokens ---
         const user = await User.findOne({ email: userEmail || effectiveUserId });
         console.log(`🔍 [PUBLISH] User found for ${userEmail || effectiveUserId}:`, !!user);
-        
+
         const fbToken = user?.socialAccounts?.facebook?.accessToken;
-        console.log("🔍 [PUBLISH] Token found:", !!fbToken);
-        
-        if (fbToken) {
-          console.log("✅ Found Meta access token! Attempting to publish...");
-          
-          // 1. Get the list of Facebook Pages this user manages
-          const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${fbToken}`);
-          let pages = pagesRes.data.data || [];
-          
-          // FALLBACK: If Facebook returns 0 pages (common with New Page Experience), 
-          // but our debug token showed we have access to ID 1111932568671242, try to fetch it directly.
-          if (pages.length === 0) {
-            console.log("🔍 [PUBLISH] Standard list empty. Attempting force-fetch for Page ID 1111932568671242...");
+        const savedPageId = user?.socialAccounts?.facebook?.pageId;
+        const savedPageToken = user?.socialAccounts?.facebook?.pageAccessToken;
+        const savedIgAccountId = user?.socialAccounts?.instagram?.igAccountId;
+        console.log("🔍 [PUBLISH] FB Token:", !!fbToken, "| Saved Page:", savedPageId, "| Saved IG Account:", savedIgAccountId);
+
+        if (!fbToken) {
+          console.log("⚠️ [PUBLISH] No Meta access token found. User must connect Facebook/Instagram first.");
+        } else {
+          // --- STEP 3: Get the live Page token (prefer saved, fallback to live fetch) ---
+          let pageId = savedPageId;
+          let pageToken = savedPageToken;
+
+          if (!pageToken) {
+            console.log("🔍 [PUBLISH] No saved page token. Fetching live from Meta...");
             try {
-              const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${fbToken}`);
-              if (forceRes.data && forceRes.data.access_token) {
-                pages = [forceRes.data];
-                console.log("✅ [PUBLISH] Force-fetch successful! Found page:", forceRes.data.name);
+              const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${fbToken}`);
+              let pages = pagesRes.data.data || [];
+              if (pages.length === 0) {
+                // Fallback: force-fetch the known page
+                try {
+                  const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${fbToken}`);
+                  if (forceRes.data?.access_token) pages = [forceRes.data];
+                } catch (e) { console.log("❌ [PUBLISH] Force-fetch failed:", e.message); }
               }
-            } catch (forceErr) {
-              console.log("❌ [PUBLISH] Force-fetch failed:", forceErr.response?.data?.error?.message || forceErr.message);
+              if (pages.length > 0) {
+                pageId = pages[0].id;
+                pageToken = pages[0].access_token;
+                console.log("✅ [PUBLISH] Live page fetched. ID:", pageId);
+              }
+            } catch (pagesErr) {
+              console.error("❌ [PUBLISH] Could not fetch pages:", pagesErr.response?.data || pagesErr.message);
             }
+          } else {
+            console.log("✅ [PUBLISH] Using saved page token for page:", pageId);
           }
 
-          if (pages.length > 0) {
-            const targetPage = pages[0];
-            const pageId = targetPage.id;
-            const pageToken = targetPage.access_token;
-            console.log("🔍 [PUBLISH] Publishing to Facebook Page:", targetPage.name, "ID:", pageId);
-            
-            // --- IMAGE PREPARATION & FACEBOOK PUBLISHING ---
-            let fbPhotoId = null;
-            if (adImage && adImage.startsWith('data:image')) {
+          if (!pageId || !pageToken) {
+            console.log("⚠️ [PUBLISH] No Facebook Page found. Cannot publish.");
+          } else {
+            // --- STEP 4: Publish to Facebook ---
+            if (isFacebookSelected) {
+              console.log("🔍 [FB] Publishing to Facebook Page feed...");
               try {
-                const isFacebookSelected = platformsLower.includes('facebook');
-                const isInstagramSelected = platformsLower.includes('instagram');
-                console.log(`DEBUG: platformsLower = ${JSON.stringify(platformsLower)}`);
-                console.log(`DEBUG: isFacebookSelected = ${isFacebookSelected}, isInstagramSelected = ${isInstagramSelected}`);
-                
-                const FormData = require('form-data');
-                const form = new FormData();
-                const base64Data = adImage.split(';base64,').pop();
-                const imageBuffer = Buffer.from(base64Data, 'base64');
-                form.append('source', imageBuffer, { filename: 'post_image.png', contentType: 'image/png' });
-                
-                form.append('message', adCaption || adCopyText || campaignName);
-                form.append('access_token', pageToken);
-
-                // If Facebook is selected, we publish. If NOT, we keep it unpublished.
-                if (!isFacebookSelected) {
-                  form.append('published', 'false');
-                  console.log("🔍 [PUBLISH] FB not selected. Uploading as UNPUBLISHED for IG bridge.");
+                if (publicImageUrl) {
+                  // Post with image via /photos (published=true)
+                  const FormData = require('form-data');
+                  const fbForm = new FormData();
+                  const base64Data = adImage.split(';base64,').pop();
+                  const imageBuffer = Buffer.from(base64Data, 'base64');
+                  fbForm.append('source', imageBuffer, { filename: 'post_image.png', contentType: 'image/png' });
+                  fbForm.append('message', adCaption || adCopyText || campaignName);
+                  fbForm.append('access_token', pageToken);
+                  const fbRes = await axios.post(
+                    `https://graph.facebook.com/v18.0/${pageId}/photos`,
+                    fbForm,
+                    { headers: fbForm.getHeaders() }
+                  );
+                  console.log("✅ [FB] Photo post success. Photo ID:", fbRes.data.id);
                 } else {
-                  console.log("🔍 [PUBLISH] FB selected. Publishing photo to Page feed.");
+                  // Text-only post
+                  await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
+                    message: adCaption || adCopyText || campaignName,
+                    access_token: pageToken
+                  });
+                  console.log("✅ [FB] Text feed post success.");
                 }
-                
-                const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/photos`, form, { headers: { ...form.getHeaders() } });
-                fbPhotoId = fbRes.data.id;
-                console.log(`✅ [META] Photo ID created: ${fbPhotoId}`);
-              } catch (uploadErr) {
-                console.error("❌ [META] Upload failed:", uploadErr.response?.data || uploadErr.message);
+              } catch (fbErr) {
+                console.error("❌ [FB] Publish failed:", fbErr.response?.data || fbErr.message);
               }
             }
 
-            // --- FACEBOOK FALLBACK ---
-            if (platformsLower.includes('facebook') && !fbPhotoId) {
-                console.log("🔍 [PUBLISH] FB selected but no photo ID. Sending as feed post.");
-                try {
-                  const payload = { message: adCaption || adCopyText || campaignName, access_token: pageToken };
-                  if (adImage && adImage.startsWith('http')) payload.url = adImage;
-                  await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, payload);
-                  console.log("✅ [FB] Feed post success.");
-                } catch (err) {
-                  console.error("❌ [FB] Feed post failed:", err.response?.data || err.message);
-                }
-            }
-
-            // --- INSTAGRAM PUBLISHING (STRICT GUARD) ---
-            if (platformsLower.includes('instagram')) {
-              console.log("🔍 [PUBLISH] Instagram selected. Starting IG flow...");
+            // --- STEP 5: Publish to Instagram ---
+            if (isInstagramSelected) {
+              console.log("🔍 [IG] Starting Instagram publish flow...");
               try {
-                const igAccountRes = await axios.get(`https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`);
-                const igAccountId = igAccountRes.data?.instagram_business_account?.id;
-                
-                if (igAccountId) {
-                  let igImageUrl = adImage && adImage.startsWith('http') ? adImage : null;
-                  if (!igImageUrl && fbPhotoId) {
-                    const photoDetail = await axios.get(`https://graph.facebook.com/v18.0/${fbPhotoId}?fields=images&access_token=${pageToken}`);
-                    igImageUrl = photoDetail.data.images[0]?.source;
-                  }
+                // Get IG Business Account ID (prefer saved, fallback to live fetch)
+                let igAccountId = savedIgAccountId;
+                if (!igAccountId) {
+                  console.log("🔍 [IG] No saved IG account ID. Fetching from Page...");
+                  const igPageRes = await axios.get(
+                    `https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`
+                  );
+                  igAccountId = igPageRes.data?.instagram_business_account?.id;
+                  console.log("🔍 [IG] Live IG Account ID:", igAccountId);
+                } else {
+                  console.log("✅ [IG] Using saved IG Account ID:", igAccountId);
+                }
 
-                  if (igImageUrl) {
-                    const containerRes = await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
-                      image_url: igImageUrl,
+                if (!igAccountId) {
+                  console.log("⚠️ [IG] No Instagram Business Account linked to this Facebook Page.");
+                  console.log("   → Make sure your Instagram account is a Business/Creator account");
+                  console.log("   → And it's connected to the Facebook Page in Meta Business Suite.");
+                } else if (!publicImageUrl) {
+                  console.log("⚠️ [IG] No public image URL available. Instagram requires an image to post.");
+                  console.log("   → Either upload an image, or set IMGBB_API_KEY in .env");
+                } else {
+                  // Create IG media container
+                  console.log("🔍 [IG] Creating media container with URL:", publicImageUrl);
+                  const containerRes = await axios.post(
+                    `https://graph.facebook.com/v18.0/${igAccountId}/media`,
+                    {
+                      image_url: publicImageUrl,
                       caption: adCaption || adCopyText || campaignName,
                       access_token: pageToken
-                    });
-                    
-                    const creationId = containerRes.data.id;
-                    if (creationId) {
-                      let isReady = false;
-                      for (let i = 0; i < 5; i++) {
-                        await new Promise(r => setTimeout(r, 3000));
-                        const statusRes = await axios.get(`https://graph.facebook.com/v18.0/${creationId}?fields=status_code&access_token=${pageToken}`);
-                        if (statusRes.data.status_code === 'FINISHED') { isReady = true; break; }
+                    }
+                  );
+                  const creationId = containerRes.data?.id;
+                  console.log("🔍 [IG] Container ID:", creationId);
+
+                  if (creationId) {
+                    // Poll for container readiness (max 5 x 3s = 15s)
+                    let isReady = false;
+                    for (let i = 0; i < 5; i++) {
+                      await new Promise(r => setTimeout(r, 3000));
+                      const statusRes = await axios.get(
+                        `https://graph.facebook.com/v18.0/${creationId}?fields=status_code&access_token=${pageToken}`
+                      );
+                      const statusCode = statusRes.data?.status_code;
+                      console.log(`🔍 [IG] Poll ${i + 1}/5 — status: ${statusCode}`);
+                      if (statusCode === 'FINISHED') { isReady = true; break; }
+                      if (statusCode === 'ERROR') {
+                        console.error("❌ [IG] Container status ERROR. Aborting.");
+                        break;
                       }
-                      if (isReady) {
-                        await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
-                          creation_id: creationId,
-                          access_token: pageToken
-                        });
-                        console.log("✅ [IG] Success.");
-                      }
+                    }
+
+                    if (isReady) {
+                      // Publish the container
+                      const publishRes = await axios.post(
+                        `https://graph.facebook.com/v18.0/${igAccountId}/media_publish`,
+                        { creation_id: creationId, access_token: pageToken }
+                      );
+                      console.log("✅ [IG] Published successfully! Post ID:", publishRes.data?.id);
+                    } else {
+                      console.log("⚠️ [IG] Container never reached FINISHED state. Post not published.");
                     }
                   }
                 }
               } catch (igErr) {
-                console.error("❌ [IG] Failed:", igErr.response?.data || igErr.message);
+                console.error("❌ [IG] Failed:", JSON.stringify(igErr.response?.data || igErr.message, null, 2));
               }
             } else {
-              console.log("🔍 [PUBLISH] Instagram NOT selected. Skipping IG flow completely.");
+              console.log("🔍 [PUBLISH] Instagram NOT selected. Skipping IG flow.");
             }
 
             campaign.status = "published";
             await campaign.save();
-          } else {
-            console.log("⚠️ User has connected Facebook but does not own any Business Pages.");
           }
-        } else {
-           console.log("⚠️ User has not connected their Facebook account yet.");
         }
       }
     } catch (publishErr) {

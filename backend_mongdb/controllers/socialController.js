@@ -147,16 +147,17 @@ exports.handleCallback = async (req, res) => {
           pageAccessToken: fbPageToken
         };
         
-        // ONLY update Instagram details if the user specifically chose to connect Instagram
-        if (platform === 'instagram' && igAccountId) {
+        // Save Instagram details if found (works for both platforms since they share Meta OAuth)
+        if (igAccountId) {
           targetUser.socialAccounts.instagram = {
             accessToken: accessToken,
             igAccountId: igAccountId,
             username: igUsername
           };
-          console.log(`✅ Linked Instagram for user: ${targetUser.email}`);
+          console.log(`✅ Linked Instagram (IG Account: ${igAccountId}) for user: ${targetUser.email}`);
         } else {
-          console.log(`✅ Linked Facebook for user: ${targetUser.email} (IG skipped per request)`);
+          console.log(`✅ Linked Facebook for user: ${targetUser.email}. No IG business account found on Page.`);
+          console.log(`   → To enable Instagram posting: connect your IG Business/Creator account to your Facebook Page in Meta Business Suite.`);
         }
         
         await targetUser.save();
