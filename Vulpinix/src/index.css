@@ -212,6 +212,7 @@
     font-feature-settings: var(--default-font-feature-settings, normal);
     font-variation-settings: var(--default-font-variation-settings, normal);
     -webkit-tap-highlight-color: transparent;
+    background-color: var(--vx-bg-primary, #030509);
   }
 
   body {
@@ -457,8 +458,15 @@
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: var(--vx-bg-primary, #030509);
+    color: var(--vx-text-primary, #fff);
+    /* Prevent any 1px white line artifacts at the bottom */
+    border-bottom: none !important;
+  }
+
+  footer, .vx-footer {
+    border-bottom: none !important;
+    outline: none !important;
   }
 
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) h1 {

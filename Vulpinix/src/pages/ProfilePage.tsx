@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import {
-  User, Mail, Phone, MapPin, Building2, Edit2, Save, X, Clock,
+  User, Phone, MapPin, Building2, Edit2, Save, X, Clock,
   CheckCircle2, TrendingUp, Eye, MousePointer, DollarSign, Calendar,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Globe,
   Link as LinkIcon, Sparkles, AlertCircle, BarChart3, History, Camera, RefreshCw
@@ -50,6 +50,7 @@ interface UserInfo {
   location: string;
   website: string;
   picture?: string;
+  onboardingCompleted?: boolean;
 }
 
 interface SocialLinks {
@@ -82,7 +83,6 @@ export default function ProfilePage() {
   // Load saved user data from localStorage
   const savedUserInfo = localStorage.getItem("userInfo");
   const savedSocialLinks = localStorage.getItem("socialLinks");
-  const savedCampaigns = localStorage.getItem("userCampaigns");
 
   // User Info State
   const [userInfo, setUserInfo] = useState<UserInfo>(() => {
@@ -113,15 +113,12 @@ export default function ProfilePage() {
 
     setIsLoadingCampaigns(true);
     try {
-      const response = await fetch("${API_BASE}/api/campaign/my-campaigns", {
+      const response = await fetch(`${API_BASE}/api/campaign/my-campaigns`, {
         headers: { "Authorization": `Bearer ${authToken}` }
       });
       const data = await response.json();
       
       if (data.success && data.campaigns) {
-        console.log("Fetched campaigns:", data.campaigns);
-        toast.info(`Synced ${data.campaigns.length} campaigns from cloud.`);
-        
         const normalized = data.campaigns.map((c: any) => ({
           id: c.id,
           name: c.name,
@@ -140,17 +137,16 @@ export default function ProfilePage() {
 
         setAdsInReview(normalized.filter((a: any) => a.status === "review"));
         setPreviousAds(normalized.filter((a: any) => a.status !== "review"));
-      } else {
-        console.log("API response success but no campaigns or failure:", data);
       }
     } catch (err) {
       console.error("Failed to fetch campaigns:", err);
-      // Fallback to localStorage if API fails
       const saved = localStorage.getItem("userCampaigns");
       if (saved) {
-        const parsed = JSON.parse(saved);
-        setAdsInReview(parsed.inReview || []);
-        setPreviousAds(parsed.history || []);
+        try {
+          const parsed = JSON.parse(saved);
+          setAdsInReview(parsed.inReview || []);
+          setPreviousAds(parsed.history || []);
+        } catch {}
       }
     } finally {
       setIsLoadingCampaigns(false);
@@ -158,10 +154,23 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
+    const userInfoStr = localStorage.getItem("userInfo");
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (!userInfoStr || isAuthenticated !== "true") {
+      navigate("/auth", { replace: true });
+    } else {
+      try {
+        const u = JSON.parse(userInfoStr);
+        if (!u.onboardingCompleted) {
+          navigate("/onboarding", { replace: true });
+        }
+      } catch (e) {
+        console.error("Auth guard error:", e);
+      }
+    }
     fetchCampaigns();
-  }, []);
+  }, [navigate]);
 
-  // Temporary states for editing
   const [tempUserInfo, setTempUserInfo] = useState<UserInfo>(userInfo);
   const [tempSocialLinks, setTempSocialLinks] = useState<SocialLinks>(socialLinks);
 
@@ -190,18 +199,6 @@ export default function ProfilePage() {
   };
 
   const handleCreateCampaign = () => {
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (!isAuthenticated || isAuthenticated !== "true") {
-      toast.error("Authentication Required");
-      navigate("/auth");
-      return;
-    }
-    if (!userInfo.name || !userInfo.email) {
-      toast.error("Profile Incomplete");
-      setIsEditingProfile(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
     navigate("/upload");
   };
 
@@ -234,86 +231,68 @@ export default function ProfilePage() {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageData = reader.result as string;
-        setProfilePicture(imageData);
-        const updatedUserInfo = { ...userInfo, picture: imageData };
-        setUserInfo(updatedUserInfo);
-        setTempUserInfo(updatedUserInfo);
-        localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
-        toast.success("Profile Picture Updated!");
+      reader.onload = (ev) => {
+        const base64 = ev.target?.result as string;
+        setProfilePicture(base64);
+        const updated = { ...userInfo, picture: base64 };
+        setUserInfo(updated);
+        localStorage.setItem("userInfo", JSON.stringify(updated));
       };
       reader.readAsDataURL(file);
     }
   };
 
   const getUserInitials = () => {
-    if (!userInfo?.name) return "U";
-    const names = userInfo.name.split(" ");
-    if (names.length >= 2) return `${names[0][0]}${names[1][0]}`.toUpperCase();
-    return userInfo.name[0].toUpperCase();
+    if (!userInfo.name) return "VX";
+    return userInfo.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 14, outline: "none", marginTop: 8 };
-  const labelStyle = { display: "block", fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" } as const;
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" };
+  const inputStyle: React.CSSProperties = { width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "10px 14px", color: "var(--vx-text-primary)", fontSize: 14, outline: "none", boxSizing: "border-box" };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
       className="vxp-page"
     >
       <style dangerouslySetInnerHTML={{ __html: PROFILE_STYLES }} />
       <div className="vxp-inner">
         
-        {/* Back Button */}
-        <button
-          onClick={() => navigate("/")}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--vx-text-muted)", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 40, transition: "color 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-muted)"}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          Back to Dashboard
-        </button>
-
-        {/* Profile Header */}
+        {/* Header */}
         <div className="vxp-header">
           <div style={{ position: "relative" }}>
-            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--vx-bg-card)", border: "2px solid var(--vx-border)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {profilePicture ? (
-                <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <div style={{ fontSize: 32, fontWeight: 800, color: "var(--vx-text-primary)" }}>{getUserInitials()}</div>
-              )}
+            <div style={{ width: 100, height: 100, borderRadius: 32, background: "linear-gradient(135deg, #a78bfa, #38bdf8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 800, color: "#fff", overflow: "hidden", border: "4px solid var(--vx-bg-card)", boxShadow: "0 10px 20px rgba(0,0,0,0.2)" }}>
+              {profilePicture ? <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : getUserInitials()}
             </div>
-            <label htmlFor="profile-upload" style={{ position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #a78bfa, #38bdf8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", border: "2px solid var(--vx-bg-primary)" }}>
-              <Camera size={14} />
+            <label style={{ position: "absolute", bottom: -4, right: -4, width: 32, height: 32, borderRadius: 10, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "3px solid var(--vx-bg-card)", boxShadow: "0 4px 10px rgba(0,0,0,0.1)" }}>
+              <Camera size={16} />
+              <input type="file" hidden accept="image/*" onChange={handleProfilePictureUpload} />
             </label>
-            <input id="profile-upload" type="file" accept="image/*" onChange={handleProfilePictureUpload} style={{ display: "none" }} />
           </div>
-          <div>
-            <h1 style={{ fontSize: "clamp(2rem, 4vw, 2.5rem)", fontWeight: 800, color: "var(--vx-text-primary)", marginBottom: 8, letterSpacing: "-0.02em" }}>My Profile</h1>
-            <p style={{ fontSize: 16, color: "var(--vx-text-secondary)" }}>Manage your account and active campaigns.</p>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 800, color: "var(--vx-text-primary)", letterSpacing: "-0.02em" }}>{userInfo.name || "User Name"}</h1>
+            <p style={{ color: "var(--vx-text-muted)", fontSize: 15 }}>{userInfo.email || "email@example.com"}</p>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => navigate("/dashboard")} style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", padding: "12px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Dashboard</button>
+            <button onClick={() => { localStorage.clear(); navigate("/auth"); }} style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#ef4444", padding: "12px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Sign Out</button>
           </div>
         </div>
 
-        {/* Grid Layout */}
         <div className="vxp-grid">
-          
           {/* LEFT COLUMN */}
           <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
             
-            {/* Personal Info */}
+            {/* Business Info */}
             <div className="vxp-card">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(167, 139, 250, 0.15)", border: "1px solid rgba(167, 139, 250, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa" }}>
-                    <User size={18} />
+                    <Building2 size={18} />
                   </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)" }}>Personal Information</h3>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)" }}>Business Details</h3>
                 </div>
                 {!isEditingProfile ? (
                   <button onClick={() => setIsEditingProfile(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: "pointer" }}><Edit2 size={12} /> Edit</button>
@@ -325,27 +304,25 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 {isEditingProfile ? (
                   <>
                     <div><label style={labelStyle}>Full Name</label><input style={inputStyle} value={tempUserInfo.name} onChange={e => setTempUserInfo({...tempUserInfo, name: e.target.value})} /></div>
-                    <div><label style={labelStyle}>Email</label><input style={inputStyle} value={tempUserInfo.email} onChange={e => setTempUserInfo({...tempUserInfo, email: e.target.value})} /></div>
-                    <div><label style={labelStyle}>Phone</label><input style={inputStyle} value={tempUserInfo.phone} onChange={e => setTempUserInfo({...tempUserInfo, phone: e.target.value})} /></div>
                     <div><label style={labelStyle}>Company</label><input style={inputStyle} value={tempUserInfo.company} onChange={e => setTempUserInfo({...tempUserInfo, company: e.target.value})} /></div>
+                    <div><label style={labelStyle}>Phone</label><input style={inputStyle} value={tempUserInfo.phone} onChange={e => setTempUserInfo({...tempUserInfo, phone: e.target.value})} /></div>
                     <div><label style={labelStyle}>Location</label><input style={inputStyle} value={tempUserInfo.location} onChange={e => setTempUserInfo({...tempUserInfo, location: e.target.value})} /></div>
                     <div><label style={labelStyle}>Website</label><input style={inputStyle} value={tempUserInfo.website} onChange={e => setTempUserInfo({...tempUserInfo, website: e.target.value})} /></div>
                   </>
                 ) : (
                   <>
                     {[
-                      { icon: <User size={16}/>, label: "Name", val: userInfo.name },
-                      { icon: <Mail size={16}/>, label: "Email", val: userInfo.email },
-                      { icon: <Phone size={16}/>, label: "Phone", val: userInfo.phone },
+                      { icon: <User size={16}/>, label: "Full Name", val: userInfo.name },
                       { icon: <Building2 size={16}/>, label: "Company", val: userInfo.company },
+                      { icon: <Phone size={16}/>, label: "Phone", val: userInfo.phone },
                       { icon: <MapPin size={16}/>, label: "Location", val: userInfo.location },
-                      { icon: <Globe size={16}/>, label: "Website", val: userInfo.website }
+                      { icon: <Globe size={16}/>, label: "Website", val: userInfo.website },
                     ].map((item, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 16 }}>
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 16 }}>
                         <div style={{ color: "var(--vx-text-muted)" }}>{item.icon}</div>
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 2 }}>{item.label}</div>

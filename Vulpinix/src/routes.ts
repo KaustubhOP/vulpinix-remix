@@ -12,11 +12,15 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import BlogsPage from "./pages/BlogsPage";
 import ArticlePage from "./pages/ArticlePage";
+import UserDashboard from "./pages/UserDashboard";
 import CampaignsDashboardPage from "./pages/CampaignsDashboardPage";
 import CampaignAnalyticsPage from "./pages/CampaignAnalyticsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CookiePage from "./pages/CookiePage";
 import NotFoundPage from "./pages/NotFoundPage";
+import CreatePostPage from "./pages/CreatePostPage";
+import SocialAccountsPage from "./pages/SocialAccountsPage";
+import OnboardingPage from "./pages/OnboardingPage";
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: "signup",
         Component: AuthPage,
+      },
+      {
+        path: "onboarding",
+        Component: OnboardingPage,
       },
       {
         path: "upload",
@@ -82,6 +90,18 @@ export const router = createBrowserRouter([
       {
         path: "blogs/:id",
         Component: ArticlePage,
+      },
+      {
+        path: "dashboard",
+        Component: UserDashboard,
+      },
+      {
+        path: "create-post",
+        Component: CreatePostPage,
+      },
+      {
+        path: "social",
+        Component: SocialAccountsPage,
       },
       {
         path: "dashboard/campaigns",

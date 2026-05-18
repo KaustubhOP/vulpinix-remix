@@ -2,7 +2,7 @@ const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
-// ── Register ──────────────────────────────────────────────────────────────────
+// â”€â”€ Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const registerUser = async (req, res) => {
   try {
     const { firstName, lastName, email, password, googleId, picture } = req.body;
@@ -30,7 +30,7 @@ const registerUser = async (req, res) => {
       success: true,
       message: "Account created successfully",
       token,
-      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId },
+      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId, onboardingCompleted: user.onboardingCompleted },
     });
   } catch (err) {
     console.error("Register error full:", err.stack || err);
@@ -38,7 +38,7 @@ const registerUser = async (req, res) => {
   }
 };
 
-// ── Login ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -58,7 +58,7 @@ const loginUser = async (req, res) => {
       success: true,
       message: "Logged in successfully",
       token,
-      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId },
+      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId, onboardingCompleted: user.onboardingCompleted },
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -69,7 +69,7 @@ const loginUser = async (req, res) => {
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// ── Google Auth (upsert) ──────────────────────────────────────────────────────
+// â”€â”€ Google Auth (upsert) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const googleAuth = async (req, res) => {
   try {
     const { credential } = req.body;
@@ -120,7 +120,7 @@ const googleAuth = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        googleId: user.googleId,
+        onboardingCompleted: user.onboardingCompleted,
         picture: user.picture
       },
     });
@@ -129,5 +129,45 @@ const googleAuth = async (req, res) => {
     res.status(500).json({ success: false, message: "Authentication failed. Please try again." });
   }
 };
+// â”€â”€ Update Profile (Onboarding) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const updateProfile = async (req, res) => {
+  try {
+    const { phone, company, industry, location, website, businessType } = req.body;
+    const userId = req.user.id;
 
-module.exports = { registerUser, loginUser, googleAuth };
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    if (phone !== undefined)        user.phone        = phone.trim();
+    if (company !== undefined)      user.company      = company.trim();
+    if (industry !== undefined)     user.industry     = industry.trim();
+    if (location !== undefined)     user.location     = location.trim();
+    if (website !== undefined)      user.website      = website.trim();
+    if (businessType !== undefined) user.businessType = businessType.trim();
+
+    user.onboardingCompleted = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        company: user.company,
+        industry: user.industry || "",
+        location: user.location || "",
+        website: user.website || "",
+        businessType: user.businessType || "",
+        onboardingCompleted: true,
+      },
+    });
+  } catch (err) {
+    console.error("updateProfile error:", err);
+    res.status(500).json({ success: false, message: "Server error updating profile" });
+  }
+};
+
+module.exports = { registerUser, loginUser, googleAuth, updateProfile };

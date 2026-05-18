@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { Lock, Share2 } from "lucide-react";
+import { getLinkedAccounts } from "./SocialAccountsPage";
 
 const UPLOAD_STYLES = `
   .vxup-page  { background: var(--vx-bg-primary); min-height: 100vh; position: relative; z-index: 1; font-family: var(--inter,'Inter',sans-serif); }
@@ -79,10 +81,26 @@ export default function UploadPage() {
 
   // Auth guard
   useEffect(() => {
-    const userInfo = localStorage.getItem("userInfo");
+    const userInfoStr = localStorage.getItem("userInfo");
     const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (!userInfo && isAuthenticated !== "true") navigate("/auth", { replace: true });
+    if (!userInfoStr || isAuthenticated !== "true") {
+      navigate("/auth", { replace: true });
+    } else {
+      try {
+        const u = JSON.parse(userInfoStr);
+        if (!u.onboardingCompleted) {
+          navigate("/onboarding", { replace: true });
+        }
+      } catch (e) {
+        console.error("Auth guard error:", e);
+      }
+    }
   }, [navigate]);
+
+  const [linkedAccounts, setLinkedAccounts] = useState<string[]>([]);
+  useEffect(() => {
+    setLinkedAccounts(getLinkedAccounts());
+  }, []);
 
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis>({
     caption: "",
@@ -239,9 +257,26 @@ export default function UploadPage() {
           </p>
         </div>
 
-        {/* Two Column Grid */}
-        <div className="vxup-cols">
-          
+        {linkedAccounts.length === 0 ? (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", padding: "80px 40px", background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, maxWidth: 600, margin: "0 auto" }}>
+            <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+              <Lock size={32} color="#eab308" />
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12, color: "var(--vx-text-primary)" }}>No Social Accounts Linked</div>
+            <div style={{ color: "var(--vx-text-muted)", fontSize: 15, margin: "0 auto 32px", lineHeight: 1.6 }}>
+              You need to connect at least one social media account before you can upload and publish campaigns.
+            </div>
+            <button
+              onClick={() => navigate("/social")}
+              style={{ padding: "14px 28px", background: "linear-gradient(135deg,#a78bfa,#38bdf8)", border: "none", borderRadius: 14, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}
+            >
+              <Share2 size={16} /> Connect Social Accounts
+            </button>
+          </motion.div>
+        ) : (
+          <>
+            {/* Two Column Grid */}
+            <div className="vxup-cols">
           {/* LEFT: MEDIA STUDIO */}
           <div className="vxup-col">
             <div className="vxup-card">
@@ -352,7 +387,7 @@ export default function UploadPage() {
                 </div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                {platforms.map(plat => (
+                {platforms.filter(p => linkedAccounts.includes(p.id)).map(plat => (
                   <button
                     key={plat.id}
                     onClick={() => togglePlatform(plat.id)}
@@ -387,7 +422,9 @@ export default function UploadPage() {
             </div>
             
           </div>
-        </div>
+          </div>
+          </>
+        )}
       </div>
     </motion.div>
   );

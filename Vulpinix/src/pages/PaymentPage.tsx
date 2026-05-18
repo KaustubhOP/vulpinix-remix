@@ -7,16 +7,10 @@ import {
   CreditCard, 
   Smartphone, 
   Wallet, 
-  ShieldCheck, 
-  Clock, 
-  DollarSign, 
-  Target, 
   Zap, 
-  ChevronRight, 
   Sparkles,
   Lock,
-  CheckCircle2,
-  AlertCircle
+  CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
 import PaymentSuccessModal from "../components/PaymentSuccessModal";
@@ -36,12 +30,6 @@ export default function PaymentPage() {
   const [generatedOtp, setGeneratedOtp] = useState("");
   const [isOtpVerified, setIsOtpVerified] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
-
-  // Card payment state
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvv, setCvv] = useState("");
 
   // UPI state
   const [upiId, setUpiId] = useState("");
@@ -126,7 +114,7 @@ export default function PaymentPage() {
         }
       };
 
-      const response = await fetch("${API_BASE}/api/campaign/create", {
+      const response = await fetch(`${API_BASE}/api/campaign/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

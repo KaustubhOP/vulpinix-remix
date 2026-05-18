@@ -39,7 +39,22 @@ export default function AuthPage() {
 
   useEffect(() => { if (location.pathname.includes("signup")) setAuthMode("signup"); else if (location.pathname.includes("login")) setAuthMode("login"); }, [location.pathname]);
   useEffect(() => { localStorage.setItem("returningUser", "true"); }, []);
-  useEffect(() => { const u = localStorage.getItem("userInfo"), a = localStorage.getItem("isAuthenticated"); if (u || a === "true") navigate("/upload", { replace: true }); }, [navigate]);
+  useEffect(() => { 
+    const uStr = localStorage.getItem("userInfo");
+    const a = localStorage.getItem("isAuthenticated"); 
+    if (a === "true" && uStr) {
+      try {
+        const u = JSON.parse(uStr);
+        if (u.onboardingCompleted) {
+          navigate("/upload", { replace: true });
+        } else {
+          navigate("/onboarding", { replace: true });
+        }
+      } catch (e) {
+        navigate("/upload", { replace: true });
+      }
+    }
+  }, [navigate]);
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
@@ -74,7 +89,10 @@ export default function AuthPage() {
         { duration: 5000 }
       );
 
-      setTimeout(() => navigate("/upload"), 1000);
+      setTimeout(() => {
+        if (data.user.onboardingCompleted) navigate("/upload");
+        else navigate("/onboarding");
+      }, 1000);
     } catch (err) {
       console.error("Google login error:", err);
       toast.error("Could not reach server. Please try again.");
@@ -92,7 +110,7 @@ export default function AuthPage() {
     if (!loginEmail || !loginPassword) { toast.error("Please fill all fields"); return; }
     setIsLoading(true);
     try {
-      const res = await fetch("${API_BASE}/api/users/login", {
+      const res = await fetch(`${API_BASE}/api/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
@@ -105,7 +123,8 @@ export default function AuthPage() {
       localStorage.setItem("userInfo", JSON.stringify(data.user));
       localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
       toast.success("Welcome back!", { description: "Successfully logged in." });
-      navigate("/upload");
+      if (data.user.onboardingCompleted) navigate("/upload");
+      else navigate("/onboarding");
     } catch {
       toast.error("Could not reach server. Please try again.");
       setIsLoading(false);
@@ -118,7 +137,7 @@ export default function AuthPage() {
     if (!termsChecked) { toast.error("Please accept the Terms of Service"); return; }
     setIsLoading(true);
     try {
-      const res = await fetch("${API_BASE}/api/users/register", {
+      const res = await fetch(`${API_BASE}/api/users/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(signupData),
@@ -130,7 +149,7 @@ export default function AuthPage() {
       localStorage.setItem("userInfo", JSON.stringify(data.user));
       localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
       toast.success("Account Created! 🎉", { description: "Welcome to VULPINIX AI" });
-      navigate("/upload");
+      navigate("/onboarding");
     } catch {
       toast.error("Could not reach server. Please try again.");
       setIsLoading(false);
@@ -329,7 +348,7 @@ export default function AuthPage() {
           {/* LOGIN */}
           {authMode === "login" && (
             <form onSubmit={handleLogin}>
-              <div className="auth-heading">Welcome back 👋</div>
+              <div className="auth-heading">Welcome back</div>
               <div className="auth-subheading">Sign in to continue to Vulpinix AI</div>
 
               <div className="auth-socials">
